@@ -15,7 +15,7 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Sabitler
-REPO_URL="https://github.com/KULLANICI_ADINIZ/mstr-install-helper.git"
+REPO_URL="https://github.com/ganimaltiok/mstr-install-helper.git"
 TEMP_DIR="/tmp/mstr-install-helper-$$"
 INSTALL_DIR="/opt/mstr-helper"
 
