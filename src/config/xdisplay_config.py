@@ -86,12 +86,16 @@ WantedBy=multi-user.target
             self.backup.backup_file(service_file, "Xvfb systemd service")
         
         try:
-            # Write service file
-            self.runner.run(f"sudo tee {service_file} > /dev/null", shell=True)
-            rc, _, _ = self.runner.run(f"echo '{service_content}' | sudo tee {service_file}", shell=True)
+            # Write service file using a temp file first
+            temp_file = "/tmp/xvfb_service_temp"
+            with open(temp_file, 'w') as f:
+                f.write(service_content)
+            
+            rc, _, stderr = self.runner.run_sudo(f"cp {temp_file} {service_file}")
+            self.runner.run(f"rm -f {temp_file}", shell=True)
             
             if rc != 0:
-                self.logger.failure("Service dosyası oluşturulamadı")
+                self.logger.failure(f"Service dosyası oluşturulamadı: {stderr}")
                 return False, "Failed to create service file"
             
             # Reload systemd

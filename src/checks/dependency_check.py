@@ -157,8 +157,15 @@ class DependencyCheck:
         """Java kontrolü"""
         self.logger.subsection("Java Kontrolü")
         
-        # Java var mı?
-        if not self.runner.is_command_available('java'):
+        # Java var mı? (alternatif yolları kontrol et)
+        java_found = False
+        for java_cmd in ['java', '/usr/bin/java', '/usr/lib/jvm/jre-11-openjdk/bin/java']:
+            rc, _, _ = self.runner.run(f"command -v {java_cmd} || which {java_cmd} || test -x {java_cmd}", shell=True)
+            if rc == 0:
+                java_found = True
+                break
+        
+        if not java_found:
             self.logger.failure("Java bulunamadı")
             return False, {'installed': False, 'status': 'fail'}
         
