@@ -1,37 +1,50 @@
 # Port Requirements by Deployment Role
+# Based on: https://www2.microstrategy.com/producthelp/current/installconfig/en-us/Content/required_ports.htm
 
 ports:
   intelligence_server:
     - port: 34952
       protocol: tcp
-      description: "Main Intelligence Server"
+      description: "Intelligence Server"
+      required: true
+    - port: 9500
+      protocol: tcp
+      description: "Modeling Service"
+      required: true
+    - port: 8300
+      protocol: tcp
+      description: "Topology - Server RPC"
+      required: true
+    - port: 8301
+      protocol: tcp
+      description: "Topology - Serf LAN"
+      required: true
+    - port: 8302
+      protocol: tcp
+      description: "Topology - Serf WAN"
       required: true
     - port: 34962
       protocol: tcp
-      description: "Metadata Repository"
+      description: "REST Server"
       required: true
-    - port: 34972
-      protocol: tcp
-      description: "Statistics Server"
-      required: true
-    - port: 39321
+    - port: 3000
       protocol: tcp
       description: "Collaboration Server"
-      required: false
-    - port: 41080
-      protocol: tcp
-      description: "Library Server"
       required: false
 
   web_server:
     - port: 8080
       protocol: tcp
-      description: "Tomcat HTTP"
+      description: "Apache Tomcat (Library/Web/Mobile)"
       required: true
     - port: 8443
       protocol: tcp
-      description: "Tomcat HTTPS"
-      required: true
+      description: "Apache Tomcat HTTPS (optional)"
+      required: false
+    - port: 20100
+      protocol: tcp
+      description: "Strategy Export"
+      required: false
     - port: 80
       protocol: tcp
       description: "Apache/Nginx HTTP (optional)"
@@ -39,6 +52,24 @@ ports:
     - port: 443
       protocol: tcp
       description: "Apache/Nginx HTTPS (optional)"
+      required: false
+
+  platform_analytics:
+    - port: 9092
+      protocol: tcp
+      description: "Apache Kafka"
+      required: false
+    - port: 2181
+      protocol: tcp
+      description: "Apache Zookeeper"
+      required: false
+    - port: 6379
+      protocol: tcp
+      description: "Redis"
+      required: false
+    - port: 5432
+      protocol: tcp
+      description: "Strategy Repository (PostgreSQL)"
       required: false
 
 deployment_roles:
