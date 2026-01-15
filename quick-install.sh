@@ -103,9 +103,11 @@ fi
 echo -e "\n${YELLOW}[5/6] Kurulum dizini hazırlanıyor...${NC}"
 mkdir -p "$INSTALL_DIR"
 
-# Dosyaları kopyala
+# Dosyaları kopyala (git klasörü dahil)
 echo "Dosyalar kopyalanıyor: $TEMP_DIR -> $INSTALL_DIR"
 cp -r "$TEMP_DIR"/* "$INSTALL_DIR/"
+cp -r "$TEMP_DIR"/.git "$INSTALL_DIR/" 2>/dev/null || true
+cp "$TEMP_DIR"/.gitignore "$INSTALL_DIR/" 2>/dev/null || true
 
 # Python bağımlılıklarını kur
 echo -e "\n${YELLOW}[6/6] Python bağımlılıkları kuruluyor...${NC}"
