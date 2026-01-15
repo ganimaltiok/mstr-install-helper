@@ -185,12 +185,13 @@ class DatabaseCheck:
             version = cursor.fetchone()[0]
             cursor.close()
             
+            version_line = version.split('\n')[0]
             self.logger.success("SQL Server bağlantısı başarılı")
-            self.logger.info(f"Version: {version.split('\\n')[0]}")
+            self.logger.info(f"Version: {version_line}")
             
             return True, {
                 'connected': True,
-                'version': version.split('\n')[0],
+                'version': version_line,
                 'status': 'pass'
             }
             
