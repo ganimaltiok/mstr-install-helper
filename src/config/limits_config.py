@@ -54,17 +54,30 @@ class LimitsConfig:
             lines = content.split('\n')
             
             # MicroStrategy için gerekli limitler
-            nofile = self.required_limits.get('nofile', 65536)
-            nproc = self.required_limits.get('nproc', 4096)
+            nofile = self.required_limits.get('nofile', 65535)
+            nproc = self.required_limits.get('nproc', 8194)
+            stack = self.required_limits.get('stack', 8388608)  # 8 MB in bytes
             
             mstr_limits = [
                 "",
                 "# MicroStrategy Installation Requirements",
+                "# Based on: https://www2.microstrategy.com/producthelp/current/installconfig/en-us/Content/Recommended_system_settings_for_UNIX_and_Linux.htm",
                 "# Added by mstr-helper",
                 f"*    soft    nofile    {nofile}",
                 f"*    hard    nofile    {nofile}",
                 f"*    soft    nproc     {nproc}",
                 f"*    hard    nproc     {nproc}",
+                f"*    soft    stack     {stack}",
+                f"*    hard    stack     {stack}",
+                "# Recommended unlimited settings:",
+                "*    soft    cpu       unlimited",
+                "*    hard    cpu       unlimited",
+                "*    soft    fsize     unlimited",
+                "*    hard    fsize     unlimited",
+                "*    soft    data      unlimited",
+                "*    hard    data      unlimited",
+                "*    soft    memlock   unlimited",
+                "*    hard    memlock   unlimited",
                 ""
             ]
             
@@ -99,6 +112,8 @@ class LimitsConfig:
             self.logger.success("System limits yapılandırıldı")
             self.logger.info(f"  nofile (open files): {nofile}")
             self.logger.info(f"  nproc (processes): {nproc}")
+            self.logger.info(f"  stack (stack size): {stack // 1024 // 1024} MB")
+            self.logger.info(f"  cpu, fsize, data, memlock: unlimited")
             self.logger.warning("Not: Yeni oturumlar için geçerli olacak")
             
             # Backup manifest kaydet

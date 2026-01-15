@@ -146,15 +146,24 @@ distributions:
         - mysql-connector-odbc
 
 system_requirements:
+  # Based on: https://www2.microstrategy.com/producthelp/current/readme/en-us/Content/requirements_i_server.htm
   min_cpu_cores: 4
-  min_ram_gb: 8
-  min_disk_gb: 60
+  min_ram_gb: 16  # MicroStrategy minimum
+  min_disk_gb: 48  # 3x RAM (16GB * 3)
   min_swap_gb: 8
   recommended_cpu_cores: 8
-  recommended_ram_gb: 16
-  recommended_disk_gb: 100
+  recommended_ram_gb: 64  # Recommended for full feature set and high performance
+  recommended_disk_gb: 192  # 3x RAM (64GB * 3)
   recommended_swap_gb: 16
 
 ulimits:
-  nofile: 65536  # Open files
-  nproc: 4096    # Max processes
+  # Based on: https://www2.microstrategy.com/producthelp/current/installconfig/en-us/Content/Recommended_system_settings_for_UNIX_and_Linux.htm
+  nofile: 65535  # Open files (descriptors)
+  nproc: 8194    # Max processes per user
+  stack: 8388608  # Stack size (8 MB in bytes)
+  # Unlimited values (handled separately):
+  # - cputime: unlimited
+  # - filesize: unlimited
+  # - datasize: unlimited
+  # - memoryuse: unlimited
+  # - vmemoryuse: unlimited

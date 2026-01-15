@@ -63,6 +63,14 @@ ports:
       protocol: tcp
       description: "Apache Zookeeper"
       required: false
+    - port: 2888
+      protocol: tcp
+      description: "Zookeeper Peer Communication (Clustering)"
+      required: false
+    - port: 3888
+      protocol: tcp
+      description: "Zookeeper Leader Election (Clustering)"
+      required: false
     - port: 6379
       protocol: tcp
       description: "Redis"
