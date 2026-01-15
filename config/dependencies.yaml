@@ -1,0 +1,160 @@
+# Linux Distribution Specific Package Dependencies
+
+distributions:
+  rhel:
+    versions: ["7", "8", "9"]
+    package_manager: "yum"
+    
+    base_packages:
+      - glibc
+      - libstdc++
+      - libgcc
+      - zlib
+      - openssl
+      - libaio
+      - krb5-libs
+      - cyrus-sasl
+      - unixODBC
+      - gtk3
+      - libX11
+      - libXext
+      - libXrender
+      - libXtst
+      - fontconfig
+      - freetype
+      - xorg-x11-server-Xvfb
+      - java-11-openjdk
+      - java-11-openjdk-devel
+    
+    database_drivers:
+      PostgreSQL:
+        - postgresql
+        - postgresql-odbc
+      Oracle:
+        - libaio
+        # Oracle Instant Client ayrıca kurulmalı
+      "SQL Server":
+        # Microsoft repo'dan msodbcsql17 kurulmalı
+        - unixODBC
+      MySQL:
+        - mysql-connector-odbc
+
+  centos:
+    versions: ["7", "8"]
+    package_manager: "yum"
+    base_packages:
+      - glibc
+      - libstdc++
+      - libgcc
+      - zlib
+      - openssl
+      - libaio
+      - krb5-libs
+      - cyrus-sasl
+      - unixODBC
+      - gtk3
+      - libX11
+      - libXext
+      - libXrender
+      - libXtst
+      - fontconfig
+      - freetype
+      - xorg-x11-server-Xvfb
+      - java-11-openjdk
+      - java-11-openjdk-devel
+    
+    database_drivers:
+      PostgreSQL:
+        - postgresql
+        - postgresql-odbc
+      Oracle:
+        - libaio
+      "SQL Server":
+        - unixODBC
+      MySQL:
+        - mysql-connector-odbc
+
+  ubuntu:
+    versions: ["18.04", "20.04", "22.04"]
+    package_manager: "apt"
+    
+    base_packages:
+      - libc6
+      - libstdc++6
+      - libgcc1
+      - zlib1g
+      - libssl1.1
+      - libkrb5-3
+      - libsasl2-2
+      - unixodbc
+      - libgtk-3-0
+      - libx11-6
+      - libxext6
+      - libxrender1
+      - libxtst6
+      - fontconfig
+      - libfreetype6
+      - xvfb
+      - openjdk-11-jdk
+      - openjdk-11-jre
+    
+    database_drivers:
+      PostgreSQL:
+        - postgresql-client
+        - odbc-postgresql
+      Oracle:
+        - libaio1
+      "SQL Server":
+        - unixodbc
+      MySQL:
+        - libmyodbc
+
+  oracle_linux:
+    versions: ["7", "8", "9"]
+    package_manager: "yum"
+    base_packages:
+      - glibc
+      - libstdc++
+      - libgcc
+      - zlib
+      - openssl
+      - libaio
+      - krb5-libs
+      - cyrus-sasl
+      - unixODBC
+      - gtk3
+      - libX11
+      - libXext
+      - libXrender
+      - libXtst
+      - fontconfig
+      - freetype
+      - xorg-x11-server-Xvfb
+      - java-11-openjdk
+      - java-11-openjdk-devel
+    
+    database_drivers:
+      PostgreSQL:
+        - postgresql
+        - postgresql-odbc
+      Oracle:
+        - oracle-instantclient-basic
+        - oracle-instantclient-odbc
+      "SQL Server":
+        - unixODBC
+      MySQL:
+        - mysql-connector-odbc
+
+system_requirements:
+  min_cpu_cores: 4
+  min_ram_gb: 8
+  min_disk_gb: 60
+  min_swap_gb: 8
+  recommended_cpu_cores: 8
+  recommended_ram_gb: 16
+  recommended_disk_gb: 100
+  recommended_swap_gb: 16
+
+ulimits:
+  nofile: 65536  # Open files
+  nproc: 4096    # Max processes

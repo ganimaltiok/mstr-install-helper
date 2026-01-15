@@ -1,0 +1,59 @@
+# Port Requirements by Deployment Role
+
+ports:
+  intelligence_server:
+    - port: 34952
+      protocol: tcp
+      description: "Main Intelligence Server"
+      required: true
+    - port: 34962
+      protocol: tcp
+      description: "Metadata Repository"
+      required: true
+    - port: 34972
+      protocol: tcp
+      description: "Statistics Server"
+      required: true
+    - port: 39321
+      protocol: tcp
+      description: "Collaboration Server"
+      required: false
+    - port: 41080
+      protocol: tcp
+      description: "Library Server"
+      required: false
+
+  web_server:
+    - port: 8080
+      protocol: tcp
+      description: "Tomcat HTTP"
+      required: true
+    - port: 8443
+      protocol: tcp
+      description: "Tomcat HTTPS"
+      required: true
+    - port: 80
+      protocol: tcp
+      description: "Apache/Nginx HTTP (optional)"
+      required: false
+    - port: 443
+      protocol: tcp
+      description: "Apache/Nginx HTTPS (optional)"
+      required: false
+
+deployment_roles:
+  Combined:
+    description: "Intelligence Server + Web Server on same host"
+    ports:
+      - intelligence_server
+      - web_server
+  
+  Web-Only:
+    description: "Web Server only"
+    ports:
+      - web_server
+  
+  IS-Only:
+    description: "Intelligence Server only"
+    ports:
+      - intelligence_server

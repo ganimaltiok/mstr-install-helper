@@ -1,0 +1,31 @@
+# MicroStrategy Deployment Configuration
+# Bu dosya otomatik oluşturulur - manuel düzenlemeyin
+
+deployment:
+  role: null  # Combined, Web-Only, IS-Only
+  timestamp: null
+  hostname: null
+
+database:
+  type: null  # PostgreSQL, Oracle, SQL Server, MySQL
+  host: null
+  port: null
+  database: null
+  username: null
+  # password buraya kaydedilmez - sadece test sırasında kullanılır
+
+network:
+  intelligence_server_ip: null  # Distributed deployment için
+  
+installation:
+  status: "prepared"  # prepared, installed, verified
+  installer_path: null
+  installation_date: null
+
+checks:
+  system: false
+  network: false
+  database: false
+  firewall: false
+  selinux: false
+  dependencies: false
