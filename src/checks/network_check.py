@@ -248,7 +248,7 @@ class NetworkCheck:
         """Tüm network kontrollerini çalıştır
         
         Args:
-            remote_server: Remote sunucu bilgisi {'ip': '...', 'role': '...'}
+            remote_server: Remote sunucu bilgisi {'ip': '...', 'role': '...', 'skip_check': bool}
         """
         self.logger.section("Network Kontrolü")
         
@@ -259,13 +259,20 @@ class NetworkCheck:
         ]
         
         # Remote sunucu kontrolü (distributed deployment için)
-        if remote_server and remote_server.get('ip'):
+        if remote_server and remote_server.get('ip') and not remote_server.get('skip_check'):
             self.logger.subsection(f"Remote Sunucu Bağlantı Kontrolü ({remote_server['role']})")
             remote_checks = self.check_remote_server_connectivity(
                 remote_server['ip'], 
                 remote_server['role']
             )
             checks.append((remote_checks[0], remote_checks[1]))
+        elif remote_server and remote_server.get('skip_check'):
+            self.logger.warning("\n⚠ Remote sunucu kontrolleri atlandı (henüz kurulu değil)")
+            self.results['remote_server'] = {
+                'skipped': True,
+                'reason': 'Remote server not installed yet',
+                'status': 'skipped'
+            }
         
         all_passed = all(check[0] for check in checks)
         

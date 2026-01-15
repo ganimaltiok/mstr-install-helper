@@ -79,8 +79,8 @@ def command_prepare():
     logger.info(f"  JSON: {json_report}")
     logger.info(f"  HTML: {html_report}")
     
-    # Completion mesajı
-    cli.show_completion(success)
+    # Completion mesajı (özet ile birlikte)
+    cli.show_completion(success, results)
     
     sys.exit(0 if success else 1)
 

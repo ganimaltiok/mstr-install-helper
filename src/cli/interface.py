@@ -4,8 +4,11 @@ Kullanıcı etkileşimi ve input toplama
 """
 
 import sys
+import os
 from typing import Dict, Optional
 from colorama import Fore, Style
+import yaml
+from pathlib import Path
 
 from ..utils.logger import get_logger
 from ..checks.database_check import DatabaseCheck
@@ -29,6 +32,18 @@ class CLIInterface:
     
     def __init__(self):
         self.logger = get_logger()
+        self.saved_config = self._load_saved_config()
+    
+    def _load_saved_config(self) -> Optional[Dict]:
+        """Kaydedilmiş konfigürasyonu yükle"""
+        config_file = Path("/opt/mstr-helper/config/deployment.yaml")
+        if config_file.exists():
+            try:
+                with open(config_file, 'r') as f:
+                    return yaml.safe_load(f)
+            except Exception as e:
+                self.logger.warning(f"Kaydedilmiş konfigürasyon yüklenemedi: {e}")
+        return None
     
     def print_banner(self):
         """Uygulama başlığı"""
@@ -95,7 +110,12 @@ class CLIInterface:
     def get_remote_server_ip(self, role: str) -> Dict[str, str]:
         """Distributed deployment için remote sunucu IP'si al"""
         if role == "Combined":
-            return {"ip": None, "role": None}
+            return {"ip": None, "role": None, "skip_check": False}
+        
+        # Saved config'den default değerleri al
+        default_ip = ""
+        if self.saved_config and self.saved_config.get('network'):
+            default_ip = self.saved_config['network'].get('remote_server_ip', '')
         
         print(f"{Fore.YELLOW}Karşı Sunucu Bilgileri{Style.RESET_ALL}")
         print("-" * 50)
@@ -103,18 +123,36 @@ class CLIInterface:
         if role == "IS-Only":
             print("IS sunucusu Web sunucusuna bağlanabilmeli.")
             remote_role = "Web-Only"
-            remote_ip = self.get_input("Web Sunucu IP Adresi", "")
+            
+            # Web sunucusu kurulu mu?
+            web_installed = self.confirm("Web sunucusu şu anda kurulu mu?", False)
+            
+            if not web_installed:
+                print(f"\n{Fore.YELLOW}⚠ Web sunucusu henüz kurulu değil.{Style.RESET_ALL}")
+                print(f"Port kontrolleri atlanacak, kurulumdan sonra doğrulayın.\n")
+                return {"ip": None, "role": remote_role, "skip_check": True}
+            
+            remote_ip = self.get_input("Web Sunucu IP Adresi", default_ip)
         else:  # Web-Only
             print("Web sunucusu Intelligence Server'a bağlanabilmeli.")
             remote_role = "IS-Only"
-            remote_ip = self.get_input("Intelligence Server IP Adresi", "")
+            
+            # IS sunucusu kurulu mu?
+            is_installed = self.confirm("Intelligence Server şu anda kurulu mu?", False)
+            
+            if not is_installed:
+                print(f"\n{Fore.YELLOW}⚠ Intelligence Server henüz kurulu değil.{Style.RESET_ALL}")
+                print(f"Port kontrolleri atlanacak, kurulumdan sonra doğrulayın.\n")
+                return {"ip": None, "role": remote_role, "skip_check": True}
+            
+            remote_ip = self.get_input("Intelligence Server IP Adresi", default_ip)
         
         if remote_ip:
             print(f"\n{Fore.GREEN}✓ Karşı sunucu: {remote_ip} ({remote_role}){Style.RESET_ALL}\n")
         else:
             print(f"\n{Fore.YELLOW}⚠ Remote sunucu IP'si belirtilmedi, port kontrolleri atlanacak{Style.RESET_ALL}\n")
         
-        return {"ip": remote_ip if remote_ip else None, "role": remote_role}
+        return {"ip": remote_ip if remote_ip else None, "role": remote_role, "skip_check": False}
     
     def select_database_type(self) -> str:
         """Database tipi seçimi"""
@@ -132,6 +170,9 @@ class CLIInterface:
         print(f"{Fore.YELLOW}Veritabanı Bağlantı Bilgileri{Style.RESET_ALL}")
         print("-" * 50)
         
+        # Saved config'den default değerleri al
+        saved_db = self.saved_config.get('database', {}) if self.saved_config else {}
+        
         # Database tipi
         db_type = self.select_database_type()
         
@@ -139,21 +180,25 @@ class CLIInterface:
         _, default_port = [(v[0], v[1]) for v in self.DATABASE_TYPES.values() if v[0] == db_type][0]
         
         # Host
-        host = self.get_input("Database Host", "localhost")
+        default_host = saved_db.get('host', 'localhost') if saved_db.get('type') == db_type else 'localhost'
+        host = self.get_input("Database Host", default_host)
         
         # Port
-        port_str = self.get_input(f"Database Port", str(default_port))
+        default_port_saved = saved_db.get('port', default_port) if saved_db.get('type') == db_type else default_port
+        port_str = self.get_input(f"Database Port", str(default_port_saved))
         try:
             port = int(port_str)
         except ValueError:
-            print(f"{Fore.RED}Geçersiz port, default kullanılıyor: {default_port}{Style.RESET_ALL}")
-            port = default_port
+            print(f"{Fore.RED}Geçersiz port, default kullanılıyor: {default_port_saved}{Style.RESET_ALL}")
+            port = default_port_saved
         
         # Database name
-        database = self.get_input("Database Adı", "metadata")
+        default_db = saved_db.get('database', 'metadata') if saved_db.get('type') == db_type else 'metadata'
+        database = self.get_input("Database Adı", default_db)
         
         # Username
-        username = self.get_input("Kullanıcı Adı", "mstr_admin")
+        default_user = saved_db.get('username', 'mstr_admin') if saved_db.get('type') == db_type else 'mstr_admin'
+        username = self.get_input("Kullanıcı Adı", default_user)
         
         # Password
         import getpass
@@ -189,8 +234,8 @@ class CLIInterface:
         
         return self.confirm("Bu ayarlarla devam edilsin mi?", True)
     
-    def show_completion(self, success: bool):
-        """Tamamlanma mesajı"""
+    def show_completion(self, success: bool, results: Dict = None):
+        """Tamamlanma mesajı ve özet"""
         if success:
             print(f"\n{Fore.GREEN}{'=' * 60}{Style.RESET_ALL}")
             print(f"{Fore.GREEN}{'  HAZIRLIK TAMAMLANDI!':^60}{Style.RESET_ALL}")
@@ -203,6 +248,67 @@ class CLIInterface:
             print(f"{Fore.RED}{'  HAZIRLIK TAMAMLANAMADI':^60}{Style.RESET_ALL}")
             print(f"{Fore.RED}{'=' * 60}{Style.RESET_ALL}\n")
             print(f"Lütfen hata mesajlarını kontrol edin ve düzeltin.\n")
+        
+        # Özet göster
+        if results:
+            self.show_summary(results)
+    
+    def show_summary(self, results: Dict):
+        """İşlem özeti göster"""
+        print(f"\n{Fore.CYAN}{'=' * 60}{Style.RESET_ALL}")
+        print(f"{Fore.CYAN}{'  ÖZET':^60}{Style.RESET_ALL}")
+        print(f"{Fore.CYAN}{'=' * 60}{Style.RESET_ALL}\n")
+        
+        checks = results.get('checks', {})
+        configs = results.get('configurations', {})
+        
+        passed_items = []
+        failed_items = []
+        skipped_items = []
+        
+        # Checks
+        for check_name, check_data in checks.items():
+            if isinstance(check_data, dict):
+                if check_data.get('passed'):
+                    passed_items.append(f"✓ {check_name.replace('_', ' ').title()}")
+                elif check_data.get('skipped'):
+                    skipped_items.append(f"○ {check_name.replace('_', ' ').title()} (atlandı)")
+                else:
+                    failed_items.append(f"✗ {check_name.replace('_', ' ').title()}")
+        
+        # Configurations
+        for config_name, config_data in configs.items():
+            if isinstance(config_data, dict):
+                if config_data.get('success'):
+                    passed_items.append(f"✓ {config_name.replace('_', ' ').title()}")
+                else:
+                    failed_items.append(f"✗ {config_name.replace('_', ' ').title()}")
+        
+        # Başarılı
+        if passed_items:
+            print(f"{Fore.GREEN}Başarılı ({len(passed_items)}):{Style.RESET_ALL}")
+            for item in passed_items:
+                print(f"  {Fore.GREEN}{item}{Style.RESET_ALL}")
+            print()
+        
+        # Başarısız
+        if failed_items:
+            print(f"{Fore.RED}Başarısız ({len(failed_items)}):{Style.RESET_ALL}")
+            for item in failed_items:
+                print(f"  {Fore.RED}{item}{Style.RESET_ALL}")
+            print()
+        
+        # Atlanan
+        if skipped_items:
+            print(f"{Fore.YELLOW}Atlanan ({len(skipped_items)}):{Style.RESET_ALL}")
+            for item in skipped_items:
+                print(f"  {Fore.YELLOW}{item}{Style.RESET_ALL}")
+            print()
+        
+        # Toplam
+        total = len(passed_items) + len(failed_items) + len(skipped_items)
+        print(f"{Fore.CYAN}Toplam: {total} işlem ({len(passed_items)} başarılı, {len(failed_items)} başarısız, {len(skipped_items)} atlanan){Style.RESET_ALL}")
+        print(f"{Fore.CYAN}{'=' * 60}{Style.RESET_ALL}\n")
     
     def show_verification_complete(self, success: bool):
         """Verification tamamlanma mesajı"""
