@@ -15,7 +15,8 @@ database:
   # password buraya kaydedilmez - sadece test sırasında kullanılır
 
 network:
-  intelligence_server_ip: null  # Distributed deployment için
+  remote_server_ip: null  # Distributed deployment için (IS-Only ise Web IP, Web-Only ise IS IP)
+  remote_server_role: null  # Remote sunucunun rolü
   
 installation:
   status: "prepared"  # prepared, installed, verified

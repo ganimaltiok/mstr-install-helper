@@ -22,10 +22,11 @@ from ..config.limits_config import LimitsConfig
 class PreInstall:
     """Pre-installation hazırlıkları orkestre eder"""
     
-    def __init__(self, deployment_role: str, db_config: Dict):
+    def __init__(self, deployment_role: str, db_config: Dict, remote_server: Dict[str, str] = None):
         self.logger = get_logger()
         self.deployment_role = deployment_role
         self.db_config = db_config
+        self.remote_server = remote_server  # {'ip': '...', 'role': '...'}
         self.results = {
             'deployment_role': deployment_role,
             'timestamp': datetime.now().isoformat(),
@@ -52,7 +53,7 @@ class PreInstall:
         self.logger.section("ADIM 2: Network Kontrolleri")
         
         checker = NetworkCheck(deployment_role=self.deployment_role)
-        passed, results = checker.run_all_checks()
+        passed, results = checker.run_all_checks(remote_server=self.remote_server)
         
         self.results['checks']['network'] = {
             'passed': passed,
@@ -184,6 +185,10 @@ class PreInstall:
                     'database': self.db_config['database'],
                     'username': self.db_config['username']
                     # password kaydedilmez
+                },
+                'network': {
+                    'remote_server_ip': self.remote_server.get('ip') if self.remote_server else None,
+                    'remote_server_role': self.remote_server.get('role') if self.remote_server else None
                 },
                 'installation': {
                     'status': 'prepared',

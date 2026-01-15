@@ -92,6 +92,30 @@ class CLIInterface:
         
         return role
     
+    def get_remote_server_ip(self, role: str) -> Dict[str, str]:
+        """Distributed deployment için remote sunucu IP'si al"""
+        if role == "Combined":
+            return {"ip": None, "role": None}
+        
+        print(f"{Fore.YELLOW}Karşı Sunucu Bilgileri{Style.RESET_ALL}")
+        print("-" * 50)
+        
+        if role == "IS-Only":
+            print("IS sunucusu Web sunucusuna bağlanabilmeli.")
+            remote_role = "Web-Only"
+            remote_ip = self.get_input("Web Sunucu IP Adresi", "")
+        else:  # Web-Only
+            print("Web sunucusu Intelligence Server'a bağlanabilmeli.")
+            remote_role = "IS-Only"
+            remote_ip = self.get_input("Intelligence Server IP Adresi", "")
+        
+        if remote_ip:
+            print(f"\n{Fore.GREEN}✓ Karşı sunucu: {remote_ip} ({remote_role}){Style.RESET_ALL}\n")
+        else:
+            print(f"\n{Fore.YELLOW}⚠ Remote sunucu IP'si belirtilmedi, port kontrolleri atlanacak{Style.RESET_ALL}\n")
+        
+        return {"ip": remote_ip if remote_ip else None, "role": remote_role}
+    
     def select_database_type(self) -> str:
         """Database tipi seçimi"""
         self.print_menu("Veritabanı Tipi Seçin:", self.DATABASE_TYPES)
@@ -148,11 +172,13 @@ class CLIInterface:
         
         return config
     
-    def confirm_configuration(self, deployment_role: str, db_config: Dict) -> bool:
-        """Konfigürasyonu onaylat"""
-        print(f"{Fore.YELLOW}Konfigürasyon Özeti{Style.RESET_ALL}")
+    def confirm_configuration(self, deployment_role: str, db_config: Dict, remote_server: Dict[str, str] = None) -> bool:
+        """Konfigürasyonu onaylatma"""
+        print(f"\n{Fore.YELLOW}Konfigürasyon Özeti{Style.RESET_ALL}")
         print("=" * 50)
         print(f"Deployment: {Fore.CYAN}{deployment_role}{Style.RESET_ALL}")
+        if remote_server and remote_server.get('ip'):
+            print(f"Remote:     {Fore.CYAN}{remote_server['role']} @ {remote_server['ip']}{Style.RESET_ALL}")
         print(f"Database:   {Fore.CYAN}{db_config['type']}{Style.RESET_ALL}")
         print(f"Host:       {db_config['host']}")
         print(f"Port:       {db_config['port']}")

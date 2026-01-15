@@ -244,8 +244,12 @@ class NetworkCheck:
             self.logger.failure(f"Bağlantı hatası: {str(e)}")
             return False, {'host': host, 'port': port, 'connected': False, 'error': str(e)}
     
-    def run_all_checks(self) -> Tuple[bool, Dict]:
-        """Tüm network kontrollerini çalıştır"""
+    def run_all_checks(self, remote_server: Dict[str, str] = None) -> Tuple[bool, Dict]:
+        """Tüm network kontrollerini çalıştır
+        
+        Args:
+            remote_server: Remote sunucu bilgisi {'ip': '...', 'role': '...'}
+        """
         self.logger.section("Network Kontrolü")
         
         checks = [
@@ -253,6 +257,15 @@ class NetworkCheck:
             self.check_dns_resolution(),
             self.check_all_ports()
         ]
+        
+        # Remote sunucu kontrolü (distributed deployment için)
+        if remote_server and remote_server.get('ip'):
+            self.logger.subsection(f"Remote Sunucu Bağlantı Kontrolü ({remote_server['role']})")
+            remote_checks = self.check_remote_server_connectivity(
+                remote_server['ip'], 
+                remote_server['role']
+            )
+            checks.append((remote_checks[0], remote_checks[1]))
         
         all_passed = all(check[0] for check in checks)
         
@@ -262,6 +275,76 @@ class NetworkCheck:
             self.logger.failure("\nBazı network kontrolleri başarısız!")
         
         return all_passed, self.results
+    
+    def check_remote_server_connectivity(self, remote_ip: str, remote_role: str) -> Tuple[bool, Dict]:
+        """Remote sunucuya gerekli portlardan erişim kontrolü
+        
+        Args:
+            remote_ip: Remote sunucunun IP adresi
+            remote_role: Remote sunucunun rolü (IS-Only veya Web-Only)
+        
+        Returns:
+            Tuple[bool, Dict]: (all_connected, results)
+        """
+        # Remote sunucuda olması gereken portları belirle
+        remote_ports = self._get_ports_for_role(remote_role)
+        
+        if not remote_ports:
+            self.logger.warning(f"Remote role için port bulunamadı: {remote_role}")
+            return True, {}
+        
+        results = []
+        all_connected = True
+        
+        self.logger.info(f"\nRemote sunucu: {remote_ip}")
+        self.logger.info(f"Kontrol edilecek port sayısı: {len(remote_ports)}\n")
+        
+        for port_info in remote_ports:
+            if port_info['required']:  # Sadece gerekli portları kontrol et
+                connected, result = self.test_connectivity(
+                    remote_ip, 
+                    port_info['port'], 
+                    timeout=5
+                )
+                result['description'] = port_info['description']
+                results.append(result)
+                
+                if not connected:
+                    all_connected = False
+                    self.logger.failure(f"✗ {port_info['description']} ({port_info['port']}/tcp) erişilemez")
+                else:
+                    self.logger.success(f"✓ {port_info['description']} ({port_info['port']}/tcp) erişilebilir")
+        
+        self.results['remote_server'] = {
+            'ip': remote_ip,
+            'role': remote_role,
+            'connectivity': results,
+            'all_connected': all_connected,
+            'status': 'pass' if all_connected else 'fail'
+        }
+        
+        return all_connected, self.results['remote_server']
+    
+    def _get_ports_for_role(self, role: str) -> list:
+        """Belirli bir rol için gerekli portları getir
+        
+        Args:
+            role: Deployment rolü (Combined, IS-Only, Web-Only)
+        
+        Returns:
+            list: Port bilgileri listesi
+        """
+        if role == "Combined":
+            # Combined için hem IS hem Web portları
+            is_ports = self.port_config.get('ports', {}).get('intelligence_server', [])
+            web_ports = self.port_config.get('ports', {}).get('web_server', [])
+            return is_ports + web_ports
+        elif role == "IS-Only":
+            return self.port_config.get('ports', {}).get('intelligence_server', [])
+        elif role == "Web-Only":
+            return self.port_config.get('ports', {}).get('web_server', [])
+        else:
+            return []
 
 
 if __name__ == '__main__':
