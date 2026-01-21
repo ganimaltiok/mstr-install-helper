@@ -46,7 +46,16 @@ class PreInstall:
         # Başarısız kontroller varsa otomatik düzeltme dene
         if not passed:
             self.logger.info("\n⚠ Bazı sistem kontrolleri başarısız, otomatik düzeltme deneniyor...")
-            checker.fix_issues()
+            
+            # FQDN sorunu varsa kullanıcıdan domain al
+            fqdn = None
+            if checker.results.get('hostname', {}).get('needs_fix'):
+                from ..cli.interface import CLIInterface
+                cli = CLIInterface()
+                hostname = checker.results.get('hostname', {}).get('hostname', 'unknown')
+                fqdn = cli.get_fqdn_domain(hostname)
+            
+            checker.fix_issues(fqdn=fqdn)
             
             # Tekrar kontrol et
             self.logger.info("\nSistem kontrolleri tekrar yapılıyor...")
@@ -272,9 +281,19 @@ class PreInstall:
             runner = get_command_runner()
             rc, hostname, _ = runner.run("hostname")
             rc, ip_output, _ = runner.run("hostname -I | awk '{print $1}'")
+            rc2, fqdn_output, _ = runner.run("hostname -f")
             
             hostname = hostname.strip()
             ip_addr = ip_output.strip() if ip_output else "N/A"
+            
+            # FQDN - system check sonuçlarından veya hostname -f'den al
+            fqdn = None
+            if self.results.get('checks', {}).get('system', {}).get('results', {}).get('hostname', {}).get('fqdn_configured'):
+                fqdn = self.results['checks']['system']['results']['hostname']['fqdn_configured']
+            elif fqdn_output and '.' in fqdn_output:
+                fqdn = fqdn_output.strip()
+            else:
+                fqdn = f"{hostname}.localdomain"
             
             content = []
             content.append("=" * 80)
@@ -282,9 +301,24 @@ class PreInstall:
             content.append("MicroStrategy Installer Ekranlarında Kullanılacak Bilgiler")
             content.append("=" * 80)
             content.append("")
-            content.append(f"Sunucu: {hostname} ({ip_addr})")
+            content.append(f"Sunucu: {hostname}")
+            content.append(f"IP Adresi: {ip_addr}")
+            content.append(f"FQDN: {fqdn}")
             content.append(f"Deployment: {self.deployment_role}")
             content.append(f"Tarih: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+            content.append("")
+            
+            # FQDN bilgisi özel vurgu
+            content.append("=" * 80)
+            content.append("ÖNEMLİ: HOSTNAME VE FQDN")
+            content.append("=" * 80)
+            content.append(f"Hostname: {hostname}")
+            content.append(f"FQDN: {fqdn}")
+            content.append(f"IP Address: {ip_addr}")
+            content.append("")
+            content.append("NOT: MicroStrategy installer FQDN çözebilmeli.")
+            content.append("     /etc/hosts dosyası otomatik yapılandırıldı.")
+            content.append(f"     Test için: ping {fqdn}")
             content.append("")
             
             # User bilgisi

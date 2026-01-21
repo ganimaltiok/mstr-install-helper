@@ -95,6 +95,32 @@ class CLIInterface:
         
         return choice in ['E', 'Y', 'YES', 'EVET']
     
+    def get_fqdn_domain(self, hostname: str) -> Optional[str]:
+        """FQDN domain bilgisini kullanıcıdan al"""
+        print(f"\n{Fore.YELLOW}Hostname ve Domain Konfigürasyonu{Style.RESET_ALL}")
+        print("-" * 50)
+        print(f"Mevcut hostname: {Fore.CYAN}{hostname}{Style.RESET_ALL}")
+        print(f"{Fore.YELLOW}⚠ FQDN (Fully Qualified Domain Name) çözülemiyor{Style.RESET_ALL}")
+        print("\nMicroStrategy kurulumu için FQDN gereklidir.")
+        print("Örnek: mstrserver.company.com veya mstrserver.localdomain\n")
+        
+        # Domain önerisi
+        default_domain = "localdomain"
+        default_fqdn = f"{hostname}.{default_domain}"
+        
+        print(f"Önerilen: {Fore.GREEN}{default_fqdn}{Style.RESET_ALL}")
+        print(f"\nDomain giriniz (örn: company.com veya localdomain)")
+        domain = self.get_input("Domain", default_domain)
+        
+        if not domain:
+            domain = default_domain
+        
+        fqdn = f"{hostname}.{domain}"
+        print(f"\n{Fore.GREEN}✓ FQDN: {fqdn}{Style.RESET_ALL}")
+        print(f"Bu FQDN /etc/hosts dosyasına eklenecek.\n")
+        
+        return fqdn
+    
     def get_user_config(self) -> Dict:
         """MicroStrategy kullanıcısı konfigürasyonu al"""
         print(f"\n{Fore.YELLOW}MicroStrategy Kullanıcı Konfigürasyonu{Style.RESET_ALL}")

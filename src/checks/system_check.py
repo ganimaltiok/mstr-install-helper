@@ -182,8 +182,16 @@ class SystemCheck:
             self.logger.info(f"Swap: {result['total_gb']} GB (Minimum: {min_required} GB, Önerilen: {recommended} GB)")
         elif total_gb > 0:
             self.logger.warning(f"Swap: {result['total_gb']} GB (Önerilen minimum: {min_required} GB)")
+            self.logger.warning("⚠ Düşük swap performans sorunlarına neden olabilir")
+            needed_gb = min_required - total_gb
+            self.logger.info(f"Swap artırmak için: sudo dd if=/dev/zero of=/swapfile bs=1G count={int(needed_gb)+1}")
+            self.logger.info("                      sudo chmod 600 /swapfile")
+            self.logger.info("                      sudo mkswap /swapfile")
+            self.logger.info("                      sudo swapon /swapfile")
+            self.logger.info("                      echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab")
         else:
             self.logger.warning("Swap alanı bulunamadı")
+            self.logger.warning("⚠ Swap oluşturmak için yukarıdaki komutları kullanabilirsiniz")
         
         self.results['swap'] = result
         return result['status'] != 'fail', result
@@ -267,8 +275,13 @@ class SystemCheck:
         self.results['hostname'] = result
         return True, result  # Warning olsa da devam eder
     
-    def fix_hostname_fqdn(self) -> bool:
-        """FQDN sorununu /etc/hosts dosyasını düzenleyerek çöz"""
+    def fix_hostname_fqdn(self, fqdn: str = None) -> bool:
+        """FQDN sorununu /etc/hosts dosyasını düzenleyerek çöz
+        
+        Args:
+            fqdn: Kullanıcıdan alınan FQDN (örn: mstrserver.company.com)
+                 None ise otomatik olarak hostname.localdomain kullanılır
+        """
         hostname_data = self.results.get('hostname', {})
         
         if not hostname_data.get('needs_fix'):
@@ -281,8 +294,15 @@ class SystemCheck:
             self.logger.failure("Hostname alınamadı")
             return False
         
-        # FQDN oluştur
-        fqdn = f"{hostname}.localdomain"
+        # FQDN kullan veya oluştur
+        if not fqdn:
+            fqdn = f"{hostname}.localdomain"
+            self.logger.info(f"FQDN otomatik oluşturuldu: {fqdn}")
+        else:
+            self.logger.info(f"Kullanıcı tarafından belirlenen FQDN: {fqdn}")
+        
+        # FQDN'yi results'a kaydet (cheatsheet için)
+        self.results['hostname']['fqdn_configured'] = fqdn
         
         # IP adresi al
         rc, ip_output, _ = self.runner.run("hostname -I")
@@ -390,8 +410,12 @@ class SystemCheck:
         
         return all_passed, self.results
     
-    def fix_issues(self) -> bool:
-        """Tespit edilen sorunları otomatik düzelt"""
+    def fix_issues(self, fqdn: str = None) -> bool:
+        """Tespit edilen sorunları otomatik düzelt
+        
+        Args:
+            fqdn: Kullanıcıdan alınan FQDN (hostname için)
+        """
         self.logger.section("Sorunlar Düzeltiliyor")
         
         fixed_count = 0
@@ -400,7 +424,7 @@ class SystemCheck:
         # Hostname/FQDN sorunu
         if self.results.get('hostname', {}).get('needs_fix'):
             total_issues += 1
-            if self.fix_hostname_fqdn():
+            if self.fix_hostname_fqdn(fqdn=fqdn):
                 fixed_count += 1
         
         # Ulimits uyarısı
