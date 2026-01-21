@@ -273,7 +273,8 @@ class SystemCheck:
             self.logger.warning(f"Hostname: {hostname.strip()} (FQDN çözümlenemedi, DNS ayarlarını kontrol edin)")
         
         self.results['hostname'] = result
-        return True, result  # Warning olsa da devam eder
+        # WARNING durumunda False döndür ki auto-fix çalışsın
+        return not result['needs_fix'], result
     
     def fix_hostname_fqdn(self, fqdn: str = None) -> bool:
         """FQDN sorununu /etc/hosts dosyasını düzenleyerek çöz
