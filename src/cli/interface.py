@@ -352,14 +352,17 @@ class CLIInterface:
             ulimits = results['ulimits']
             if ulimits.get('nofile', {}).get('status') == 'fail':
                 nofile = ulimits['nofile']
-                details.append(f"Open files limit: {nofile.get('current')} (Gerekli: {nofile.get('required')})")
+                # 'soft' değerini kullan, 'current' değil
+                details.append(f"Open files limit: {nofile.get('soft', 'unknown')} (Gerekli: {nofile.get('required')})")
             if ulimits.get('nproc', {}).get('status') == 'fail':
                 nproc = ulimits['nproc']
-                details.append(f"Process limit: {nproc.get('current')} (Gerekli: {nproc.get('required')})")
+                # 'soft' değerini kullan, 'current' değil
+                details.append(f"Process limit: {nproc.get('soft', 'unknown')} (Gerekli: {nproc.get('required')})")
         
         # Hostname kontrolü
-        if 'hostname' in results and results['hostname'].get('status') == 'warning':
-            details.append(f"Hostname: FQDN çözümlenemedi")
+        if 'hostname' in results and (results['hostname'].get('status') == 'warning' or results['hostname'].get('needs_fix')):
+            hostname_info = results['hostname']
+            details.append(f"Hostname: {hostname_info.get('hostname', 'unknown')} - FQDN çözümlenemedi")
         
         # Port kontrolleri
         if 'ports' in results and results['ports'].get('status') == 'fail':
