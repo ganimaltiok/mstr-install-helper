@@ -258,6 +258,211 @@ class PreInstall:
             self.logger.error(f"Konfigürasyon kaydedilemedi: {str(e)}")
             return False
     
+    def save_installation_cheatsheet(self):
+        """Kurulum sırasında kullanılacak bilgileri dosyaya kaydet"""
+        try:
+            from pathlib import Path
+            cheatsheet_dir = Path('/var/log/mstr-helper')
+            cheatsheet_dir.mkdir(parents=True, exist_ok=True)
+            cheatsheet_file = cheatsheet_dir / 'installation-cheatsheet.txt'
+            
+            # Get hostname and IP
+            from ..utils.command_runner import get_command_runner
+            runner = get_command_runner()
+            rc, hostname, _ = runner.run("hostname")
+            rc, ip_output, _ = runner.run("hostname -I | awk '{print $1}'")
+            
+            hostname = hostname.strip()
+            ip_addr = ip_output.strip() if ip_output else "N/A"
+            
+            content = []
+            content.append("=" * 80)
+            content.append("MICROSTRATEGY KURULUM KOPYA KAĞIDI")
+            content.append("MicroStrategy Installer Ekranlarında Kullanılacak Bilgiler")
+            content.append("=" * 80)
+            content.append("")
+            content.append(f"Sunucu: {hostname} ({ip_addr})")
+            content.append(f"Deployment: {self.deployment_role}")
+            content.append(f"Tarih: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+            content.append("")
+            
+            # User bilgisi
+            if self.user_config and self.user_config.get('create_user'):
+                username = self.user_config.get('username', 'mstr')
+                content.append("=" * 80)
+                content.append("KULLANICI BİLGİSİ")
+                content.append("=" * 80)
+                content.append(f"MicroStrategy User: {username}")
+                content.append(f"Kurulum Öncesi: su - {username}")
+                content.append(f"Kurulum Komutu: sudo ./MicroStrategy-*.sh")
+                content.append("")
+            
+            # Deployment seçimi
+            content.append("=" * 80)
+            content.append("1. DEPLOYMENT TİPİ SEÇİMİ (Installer Ekranı)")
+            content.append("=" * 80)
+            
+            if self.deployment_role == 'Combined':
+                content.append("✓ Intelligence Server     → SEÇİN")
+                content.append("✓ Web Server             → SEÇİN")
+                content.append("○ Platform Analytics     → OPSİYONEL")
+                content.append("○ Library Server         → OPSİYONEL")
+            elif self.deployment_role == 'IS-Only':
+                content.append("✓ Intelligence Server     → SEÇİN")
+                content.append("✗ Web Server             → SEÇMEYİN")
+                content.append("○ Platform Analytics     → OPSİYONEL")
+                content.append("○ Library Server         → OPSİYONEL")
+            elif self.deployment_role == 'Web-Only':
+                content.append("✗ Intelligence Server     → SEÇMEYİN")
+                content.append("✓ Web Server             → SEÇİN")
+                content.append("✗ Platform Analytics     → SEÇMEYİN")
+                content.append("✗ Library Server         → SEÇMEYİN")
+            
+            content.append("")
+            
+            # Database bilgileri (IS içeren deploymentlar için)
+            if self.deployment_role in ['Combined', 'IS-Only']:
+                content.append("=" * 80)
+                content.append("2. METADATA DATABASE BAĞLANTISI (Installer Ekranı)")
+                content.append("=" * 80)
+                content.append(f"Database Type:    {self.db_config['type']}")
+                content.append(f"Host/Server:      {self.db_config['host']}")
+                content.append(f"Port:             {self.db_config['port']}")
+                content.append(f"Database Name:    {self.db_config['database']}")
+                content.append(f"Username:         {self.db_config['username']}")
+                content.append(f"Password:         [Hazırlık sırasında test ettiğiniz şifre]")
+                content.append("")
+                content.append("KOPYALA-YAPIŞTIR İÇİN:")
+                content.append(f"  Host:     {self.db_config['host']}")
+                content.append(f"  Port:     {self.db_config['port']}")
+                content.append(f"  Database: {self.db_config['database']}")
+                content.append(f"  Username: {self.db_config['username']}")
+                content.append("")
+            
+            # Remote server bilgisi (distributed deployment)
+            if self.remote_server and self.remote_server.get('ip'):
+                content.append("=" * 80)
+                content.append("3. REMOTE SERVER BAĞLANTISI")
+                content.append("=" * 80)
+                if self.deployment_role == 'Web-Only':
+                    content.append("Intelligence Server bağlantısı (Web yapılandırmasında):")
+                    content.append(f"  IS Server IP:   {self.remote_server['ip']}")
+                    content.append(f"  IS Server Port: 34952")
+                elif self.deployment_role == 'IS-Only':
+                    content.append("Web Server bilgisi (referans için):")
+                    content.append(f"  Web Server IP:  {self.remote_server['ip']}")
+                    content.append(f"  Web HTTP Port:  8080")
+                    content.append(f"  Web HTTPS Port: 8443")
+                content.append("")
+            
+            # Port bilgileri
+            content.append("=" * 80)
+            content.append("4. PORT BİLGİLERİ (Referans)")
+            content.append("=" * 80)
+            
+            if self.deployment_role in ['Combined', 'IS-Only']:
+                content.append("Intelligence Server Portları:")
+                content.append("  34952  → Intelligence Server (ana port)")
+                content.append("  9500   → Modeling Service")
+                content.append("  8300-8302 → Topology Services")
+                content.append("  34962  → REST API Server")
+                content.append("  3000   → Collaboration Server")
+                content.append("")
+            
+            if self.deployment_role in ['Combined', 'Web-Only']:
+                content.append("Web Server Portları:")
+                content.append("  8080   → Tomcat HTTP")
+                content.append("  8443   → Tomcat HTTPS")
+                content.append("  20100  → Strategy Export Service")
+                content.append("")
+            
+            # Installation path
+            content.append("=" * 80)
+            content.append("5. KURULUM YOLU ÖNERİSİ")
+            content.append("=" * 80)
+            content.append("Installation Path: /opt/MicroStrategy")
+            content.append("  (Default yolu kullanabilirsiniz)")
+            content.append("")
+            
+            # Admin credentials
+            content.append("=" * 80)
+            content.append("6. ADMİNİSTRATÖR BİLGİLERİ")
+            content.append("=" * 80)
+            content.append("MicroStrategy Administrator hesabı oluşturulacak:")
+            content.append("  Username: administrator (default)")
+            content.append("  Password: [Güçlü bir şifre belirleyin]")
+            content.append("  ÖNERİ: En az 12 karakter, büyük/küçük harf, rakam, özel karakter")
+            content.append("")
+            
+            # Post-installation
+            content.append("=" * 80)
+            content.append("7. KURULUM SONRASI")
+            content.append("=" * 80)
+            content.append("Kurulum tamamlandığında:")
+            content.append("  1. Servislerin çalıştığını kontrol edin:")
+            content.append("     sudo mstr-helper verify")
+            content.append("")
+            content.append("  2. Web arayüzüne erişin:")
+            if self.deployment_role in ['Combined', 'Web-Only']:
+                content.append(f"     http://{hostname}:8080/MicroStrategy/servlet/mstrWeb")
+                content.append(f"     https://{hostname}:8443/MicroStrategy/servlet/mstrWeb")
+            content.append("")
+            
+            # Troubleshooting
+            content.append("=" * 80)
+            content.append("8. SORUN GİDERME")
+            content.append("=" * 80)
+            content.append("Loglar:")
+            content.append("  /opt/MicroStrategy/install.log")
+            content.append("  /var/log/mstr-helper/")
+            content.append("")
+            content.append("Servis kontrolleri:")
+            if self.deployment_role in ['Combined', 'IS-Only']:
+                content.append("  sudo systemctl status MicroStrategyIntelligenceServer")
+            if self.deployment_role in ['Combined', 'Web-Only']:
+                content.append("  sudo systemctl status tomcat")
+            content.append("")
+            content.append("Port kontrolleri:")
+            content.append("  sudo netstat -tuln | grep -E '34952|8080|8443'")
+            content.append("  sudo ss -tuln | grep -E '34952|8080|8443'")
+            content.append("")
+            
+            content.append("=" * 80)
+            content.append("NOT: Bu dosya otomatik oluşturulmuştur")
+            content.append(f"Kayıt: {cheatsheet_file}")
+            content.append("=" * 80)
+            
+            # Dosyayı yaz
+            with open(cheatsheet_file, 'w') as f:
+                f.write('\n'.join(content))
+            
+            self.logger.success(f"Kurulum kopya kağıdı oluşturuldu: {cheatsheet_file}")
+            
+            # Terminal'e de göster
+            self.logger.info("")
+            self.logger.section("KURULUM KOPYA KAĞIDI")
+            self.logger.info(f"Detaylı bilgiler: {cheatsheet_file}")
+            self.logger.info("")
+            
+            # Özet göster
+            for line in content[0:50]:  # İlk önemli kısımları göster
+                if line.startswith("="):
+                    self.logger.info(line)
+                elif line.startswith("✓") or line.startswith("✗") or line.startswith("○"):
+                    self.logger.info(f"  {line}")
+                elif ":" in line and not line.startswith(" "):
+                    self.logger.info(line)
+            
+            self.logger.info("")
+            self.logger.info(f"Tüm detaylar için: cat {cheatsheet_file}")
+            self.logger.info("")
+            
+            return True
+            
+        except Exception as e:
+            self.logger.warning(f"Kurulum kopya kağıdı oluşturulamadı: {str(e)}")
+            return False
+    
     def show_installation_instructions(self):
         """Kurulum talimatlarını göster"""
         self.logger.section("MicroStrategy Kurulum Talimatları")
@@ -387,6 +592,10 @@ class PreInstall:
         if not failed_steps:
             self.logger.success("✓ TÜM HAZIRLIKLAR TAMAMLANDI!")
             self.logger.success("Sunucu MicroStrategy kurulumu için hazır.\n")
+            
+            # Kurulum kopya kağıdı oluştur
+            self.save_installation_cheatsheet()
+            
             self.show_installation_instructions()
             return True, self.results
         else:
