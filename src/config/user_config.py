@@ -73,7 +73,7 @@ class UserConfig:
                 cmd_parts.append('-m')  # Create home directory
             cmd_parts.extend([
                 '-s', '/bin/bash',  # Set bash as default shell
-                '-c', f'MicroStrategy Service Account',  # Comment
+                '-c', '"MicroStrategy Service Account"',  # Comment (quoted for spaces)
                 username
             ])
             
