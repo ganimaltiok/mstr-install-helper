@@ -266,48 +266,115 @@ class CLIInterface:
         failed_items = []
         skipped_items = []
         
-        # Checks
+        # Checks - detaylı analiz
         for check_name, check_data in checks.items():
             if isinstance(check_data, dict):
+                display_name = check_name.replace('_', ' ').title()
+                
                 if check_data.get('passed'):
-                    passed_items.append(f"✓ {check_name.replace('_', ' ').title()}")
+                    passed_items.append((display_name, None))
                 elif check_data.get('skipped'):
-                    skipped_items.append(f"○ {check_name.replace('_', ' ').title()} (atlandı)")
+                    skipped_items.append((display_name, 'atlandı'))
                 else:
-                    failed_items.append(f"✗ {check_name.replace('_', ' ').title()}")
+                    # Başarısız - detayları bul
+                    failed_details = self._get_failure_details(check_data.get('results', {}))
+                    failed_items.append((display_name, failed_details))
         
         # Configurations
         for config_name, config_data in configs.items():
             if isinstance(config_data, dict):
+                display_name = config_name.replace('_', ' ').title()
+                
                 if config_data.get('success'):
-                    passed_items.append(f"✓ {config_name.replace('_', ' ').title()}")
+                    passed_items.append((display_name, None))
                 else:
-                    failed_items.append(f"✗ {config_name.replace('_', ' ').title()}")
+                    error_msg = config_data.get('results', {}).get('error', 'Bilinmeyen hata')
+                    failed_items.append((display_name, error_msg))
         
         # Başarılı
         if passed_items:
             print(f"{Fore.GREEN}Başarılı ({len(passed_items)}):{Style.RESET_ALL}")
-            for item in passed_items:
-                print(f"  {Fore.GREEN}{item}{Style.RESET_ALL}")
+            for item_name, _ in passed_items:
+                print(f"  {Fore.GREEN}✓ {item_name}{Style.RESET_ALL}")
             print()
         
-        # Başarısız
+        # Başarısız - detaylarla
         if failed_items:
             print(f"{Fore.RED}Başarısız ({len(failed_items)}):{Style.RESET_ALL}")
-            for item in failed_items:
-                print(f"  {Fore.RED}{item}{Style.RESET_ALL}")
+            for item_name, details in failed_items:
+                print(f"  {Fore.RED}✗ {item_name}{Style.RESET_ALL}")
+                if details:
+                    if isinstance(details, list):
+                        for detail in details:
+                            print(f"    {Fore.YELLOW}→ {detail}{Style.RESET_ALL}")
+                    else:
+                        print(f"    {Fore.YELLOW}→ {details}{Style.RESET_ALL}")
             print()
         
         # Atlanan
         if skipped_items:
             print(f"{Fore.YELLOW}Atlanan ({len(skipped_items)}):{Style.RESET_ALL}")
-            for item in skipped_items:
-                print(f"  {Fore.YELLOW}{item}{Style.RESET_ALL}")
+            for item_name, reason in skipped_items:
+                print(f"  {Fore.YELLOW}○ {item_name} ({reason}){Style.RESET_ALL}")
             print()
         
         # Toplam
         total = len(passed_items) + len(failed_items) + len(skipped_items)
         print(f"{Fore.CYAN}Toplam: {total} işlem ({len(passed_items)} başarılı, {len(failed_items)} başarısız, {len(skipped_items)} atlanan){Style.RESET_ALL}")
+    
+    def _get_failure_details(self, results: Dict) -> list:
+        """Başarısız kontrollerin detaylarını çıkar"""
+        details = []
+        
+        # CPU kontrolü
+        if 'cpu' in results and results['cpu'].get('status') == 'fail':
+            cpu_data = results['cpu']
+            details.append(f"CPU: {cpu_data.get('current')} cores (Gerekli: {cpu_data.get('required')})")
+        
+        # RAM kontrolü
+        if 'ram' in results and results['ram'].get('status') == 'fail':
+            ram_data = results['ram']
+            details.append(f"RAM: {ram_data.get('current_gb')}GB (Gerekli: {ram_data.get('required_gb')}GB)")
+        
+        # Disk kontrolü
+        if 'disk' in results and results['disk'].get('status') == 'fail':
+            for disk_info in results['disk'].get('partitions', []):
+                if disk_info.get('status') == 'fail':
+                    details.append(f"Disk {disk_info['mount']}: {disk_info['free_gb']}GB boş (Gerekli: {disk_info['required_gb']}GB)")
+        
+        # Swap kontrolü
+        if 'swap' in results and results['swap'].get('status') == 'fail':
+            swap_data = results['swap']
+            details.append(f"Swap: {swap_data.get('current_gb')}GB (Gerekli: {swap_data.get('required_gb')}GB)")
+        
+        # Ulimits kontrolü
+        if 'ulimits' in results:
+            ulimits = results['ulimits']
+            if ulimits.get('nofile', {}).get('status') == 'fail':
+                nofile = ulimits['nofile']
+                details.append(f"Open files limit: {nofile.get('current')} (Gerekli: {nofile.get('required')})")
+            if ulimits.get('nproc', {}).get('status') == 'fail':
+                nproc = ulimits['nproc']
+                details.append(f"Process limit: {nproc.get('current')} (Gerekli: {nproc.get('required')})")
+        
+        # Hostname kontrolü
+        if 'hostname' in results and results['hostname'].get('status') == 'warning':
+            details.append(f"Hostname: FQDN çözümlenemedi")
+        
+        # Port kontrolleri
+        if 'ports' in results and results['ports'].get('status') == 'fail':
+            for port_info in results['ports'].get('checked_ports', []):
+                if port_info.get('status') == 'fail' and port_info.get('required'):
+                    details.append(f"Port {port_info['port']}/{port_info['protocol']} kullanımda")
+        
+        # Network kontrolleri
+        if 'remote_server' in results and results['remote_server'].get('status') == 'fail':
+            remote = results['remote_server']
+            for conn in remote.get('connectivity', []):
+                if not conn.get('connected'):
+                    details.append(f"Remote port erişilemez: {conn.get('description')} ({conn.get('port')})")
+        
+        return details if details else ['Detaylı hata bilgisi mevcut değil']
         print(f"{Fore.CYAN}{'=' * 60}{Style.RESET_ALL}\n")
     
     def show_verification_complete(self, success: bool):
