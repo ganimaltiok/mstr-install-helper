@@ -117,13 +117,13 @@ python3 -m pip install --ignore-installed -r requirements.txt
 # Executable oluştur
 echo -e "\n${YELLOW}Komut satırı aracı oluşturuluyor...${NC}"
 
-cat > /usr/local/bin/mstr-helper << 'EOFBIN'
+cat > /usr/bin/mstr-helper << 'EOFBIN'
 #!/bin/bash
 cd /opt/mstr-helper
 python3 -m src.main "$@"
 EOFBIN
 
-chmod +x /usr/local/bin/mstr-helper
+chmod +x /usr/bin/mstr-helper
 
 # Config dizini oluştur
 mkdir -p /var/lib/mstr-helper/backups

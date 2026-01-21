@@ -14,7 +14,7 @@ YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
 INSTALL_DIR="/opt/mstr-helper"
-BIN_LINK="/usr/local/bin/mstr-helper"
+BIN_LINK="/usr/bin/mstr-helper"
 
 echo -e "${GREEN}========================================${NC}"
 echo -e "${GREEN}MicroStrategy Installation Helper${NC}"

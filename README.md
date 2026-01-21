@@ -30,14 +30,6 @@ Linux sunucularını MicroStrategy Intelligence Server ve Web Server kurulumu i�
 curl -sSL https://raw.githubusercontent.com/ganimaltiok/mstr-install-helper/main/quick-install.sh | sudo bash
 ```
 
-**Not:** Kurulum sonrası `sudo mstr-helper` komutu çalışmazsa (PATH sorunu), doğrudan Python modülü olarak çalıştırın:
-
-```bash
-cd /opt/mstr-helper && sudo python3 -m src.main prepare
-cd /opt/mstr-helper && sudo python3 -m src.main verify
-cd /opt/mstr-helper && sudo python3 -m src.main rollback
-```
-
 ### Yöntem 2: Manuel Kurulum
 
 ```bash
@@ -50,7 +42,7 @@ Her iki yöntem de:
 1. Python3 ve pip'i kontrol eder/yükler
 2. Gerekli Python bağımlılıklarını kurar
 3. `/opt/mstr-helper` dizinine uygulamayı kurar
-4. `/usr/local/bin/mstr-helper` komutu oluşturur
+4. `/usr/bin/mstr-helper` komutu oluşturur
 5. Git repository'yi kopyalar (güncelleme için)
 
 ## Kullanım
