@@ -312,8 +312,8 @@ class SystemCheck:
         try:
             # /etc/hosts dosyasını oku
             hosts_file = "/etc/hosts"
-            from ..utils.backup_manager import get_backup_manager
-            backup = get_backup_manager()
+            from ..utils.backup_manager import BackupManager
+            backup = BackupManager()
             
             # Backup al
             if Path(hosts_file).exists():
