@@ -6,6 +6,10 @@ deployment:
   timestamp: null
   hostname: null
 
+user:
+  create_user: false  # MicroStrategy için özel kullanıcı oluşturuldu mu?
+  username: null  # Örn: mstr
+
 database:
   type: null  # PostgreSQL, Oracle, SQL Server, MySQL
   host: null

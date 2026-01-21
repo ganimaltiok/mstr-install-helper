@@ -95,6 +95,48 @@ class CLIInterface:
         
         return choice in ['E', 'Y', 'YES', 'EVET']
     
+    def get_user_config(self) -> Dict:
+        """MicroStrategy kullanıcısı konfigürasyonu al"""
+        print(f"\n{Fore.YELLOW}MicroStrategy Kullanıcı Konfigürasyonu{Style.RESET_ALL}")
+        print("-" * 50)
+        print(f"{Fore.CYAN}Best Practice:{Style.RESET_ALL} MicroStrategy için özel bir Linux kullanıcısı oluşturmak")
+        print("  • Güvenlik: Minimum privilege principle")
+        print("  • İzolasyon: Ayrı user namespace")
+        print("  • Yönetim: Kolay process ve file tracking")
+        print()
+        
+        # Saved config'den default değerleri al
+        saved_user = self.saved_config.get('user', {}) if self.saved_config else {}
+        default_create = saved_user.get('create_user', False)
+        default_username = saved_user.get('username', 'mstr')
+        
+        # Kullanıcı oluşturulsun mu?
+        create_user = self.confirm(
+            "MicroStrategy için özel kullanıcı oluşturulsun mu?", 
+            default_create
+        )
+        
+        if not create_user:
+            print(f"{Fore.YELLOW}⚠ Kullanıcı oluşturulmayacak, root ile devam edilecek{Style.RESET_ALL}\n")
+            return {
+                'create_user': False,
+                'username': None
+            }
+        
+        # Kullanıcı adı
+        username = self.get_input("Kullanıcı adı", default_username)
+        
+        print(f"\n{Fore.GREEN}✓ Kullanıcı yapılandırması:{Style.RESET_ALL}")
+        print(f"  • Kullanıcı: {username}")
+        print(f"  • Sudo: Full access")
+        print(f"  • Home: /home/{username}")
+        print()
+        
+        return {
+            'create_user': True,
+            'username': username
+        }
+    
     def select_deployment_role(self) -> str:
         """Deployment role seçimi"""
         self.print_menu("Deployment Tipi Seçin:", self.DEPLOYMENT_ROLES)
@@ -217,10 +259,17 @@ class CLIInterface:
         
         return config
     
-    def confirm_configuration(self, deployment_role: str, db_config: Dict, remote_server: Dict[str, str] = None) -> bool:
+    def confirm_configuration(self, deployment_role: str, db_config: Dict, remote_server: Dict[str, str] = None, user_config: Dict = None) -> bool:
         """Konfigürasyonu onaylatma"""
         print(f"\n{Fore.YELLOW}Konfigürasyon Özeti{Style.RESET_ALL}")
         print("=" * 50)
+        
+        # User configuration
+        if user_config and user_config.get('create_user'):
+            print(f"User:       {Fore.CYAN}{user_config['username']}{Style.RESET_ALL} (sudo enabled)")
+        else:
+            print(f"User:       {Fore.YELLOW}root (no dedicated user){Style.RESET_ALL}")
+        
         print(f"Deployment: {Fore.CYAN}{deployment_role}{Style.RESET_ALL}")
         if remote_server and remote_server.get('ip'):
             print(f"Remote:     {Fore.CYAN}{remote_server['role']} @ {remote_server['ip']}{Style.RESET_ALL}")
@@ -234,15 +283,32 @@ class CLIInterface:
         
         return self.confirm("Bu ayarlarla devam edilsin mi?", True)
     
-    def show_completion(self, success: bool, results: Dict = None):
+    def show_completion(self, success: bool, results: Dict = None, user_config: Dict = None):
         """Tamamlanma mesajı ve özet"""
         if success:
             print(f"\n{Fore.GREEN}{'=' * 60}{Style.RESET_ALL}")
             print(f"{Fore.GREEN}{'  HAZIRLIK TAMAMLANDI!':^60}{Style.RESET_ALL}")
             print(f"{Fore.GREEN}{'=' * 60}{Style.RESET_ALL}\n")
-            print(f"{Fore.YELLOW}Sıradaki adım:{Style.RESET_ALL}")
-            print(f"  1. MicroStrategy installer'ı çalıştırın")
-            print(f"  2. Kurulum tamamlandığında: {Fore.CYAN}sudo mstr-helper verify{Style.RESET_ALL}\n")
+            
+            # Kullanıcı bilgisi varsa göster
+            if user_config and user_config.get('create_user'):
+                username = user_config.get('username', 'mstr')
+                print(f"{Fore.CYAN}MicroStrategy Kullanıcısı:{Style.RESET_ALL}")
+                print(f"  • Kullanıcı adı: {Fore.GREEN}{username}{Style.RESET_ALL}")
+                print(f"  • Sudo yetkisi: {Fore.GREEN}Enabled{Style.RESET_ALL}")
+                print(f"  • Home dizin: /home/{username}")
+                print()
+                print(f"{Fore.YELLOW}Kurulum talimatı:{Style.RESET_ALL}")
+                print(f"  1. '{username}' kullanıcısı ile login olun:")
+                print(f"     {Fore.CYAN}su - {username}{Style.RESET_ALL}")
+                print(f"  2. MicroStrategy installer'ı çalıştırın:")
+                print(f"     {Fore.CYAN}sudo ./MicroStrategy-*.sh{Style.RESET_ALL}")
+                print(f"  3. Kurulum tamamlandığında:")
+                print(f"     {Fore.CYAN}sudo mstr-helper verify{Style.RESET_ALL}\n")
+            else:
+                print(f"{Fore.YELLOW}Sıradaki adım:{Style.RESET_ALL}")
+                print(f"  1. MicroStrategy installer'ı çalıştırın")
+                print(f"  2. Kurulum tamamlandığında: {Fore.CYAN}sudo mstr-helper verify{Style.RESET_ALL}\n")
         else:
             print(f"\n{Fore.RED}{'=' * 60}{Style.RESET_ALL}")
             print(f"{Fore.RED}{'  HAZIRLIK TAMAMLANAMADI':^60}{Style.RESET_ALL}")

@@ -56,55 +56,94 @@ MSTR_Install_Helper/
 
 ## Key Features Implemented
 
-### 1. **Single Command Installation** ✅
+### 1. **Quick Installation from GitHub** ✅
 ```bash
-sudo bash install.sh
+curl -sSL https://raw.githubusercontent.com/ganimaltiok/mstr-install-helper/main/quick-install.sh | sudo bash
 ```
-- Auto-installs Python3, pip, dependencies
+- One-command installation from GitHub
+- Auto-installs git, Python3, pip, dependencies
 - Creates `/usr/local/bin/mstr-helper` executable
+- Preserves .git for easy updates
 - No manual setup required
 
-### 2. **Interactive Configuration** ✅
+### 2. **Configuration Persistence** ✅
+- Saves all configuration to `/opt/mstr-helper/config/deployment.yaml`
+- Deployment role, database info, remote server IPs stored
+- Next runs load previous values as defaults
+- No need to re-enter same information
+- Password not saved (security)
+
+### 3. **Interactive Configuration** ✅
 - Deployment role selection (Combined/Web-Only/IS-Only)
 - Database type selection (PostgreSQL/Oracle/SQL Server/MySQL)
+- Distributed deployment with remote server IP collection
 - User-friendly menus with colors
 - Input validation
 
-### 3. **Comprehensive System Checks** ✅
+### 4. **Comprehensive System Checks** ✅
 - **System Resources:** CPU cores, RAM, disk space, swap
+- **FQDN Validation:** Hostname resolves to FQDN
 - **Network:** Port availability, DNS resolution, hostname
+- **Remote Server:** Port connectivity to IS/Web servers (distributed deployments)
 - **Database:** Connection test, privilege validation (CREATE, INSERT, SELECT, DROP)
 - **Dependencies:** Auto-install missing packages based on distro
 
-### 4. **Automatic Configuration** ✅
+### 5. **Automatic Issue Correction** ✅
+- **FQDN Fix:** Edits `/etc/hosts` to add hostname.localdomain entry
+- **Ulimits Fix:** Updates `/etc/security/limits.conf` with required values
+- **Re-check:** Automatically re-runs checks after fixes
+- **Backup:** Creates backups before modifying system files
+- **Notification:** Informs user about session restart for ulimits
+
+### 6. **Distributed Deployment Support** ✅
+- **Web-Only:** Asks for Intelligence Server IP
+- **IS-Only:** Asks for Web Server IP
+- **Installation Status Check:** "Is remote server installed?" prompt
+- **Smart Port Checks:** Skips remote checks if not installed yet
+- **Connectivity Validation:** Tests all required ports on remote server
+
+### 7. **Detailed Execution Summary** ✅
+- Pass/Fail status for each check
+- Specific failure reasons with actual vs required values
+- Example:
+  ```
+  ✅ PASS: CPU Cores (8 cores) - OK
+  ❌ FAIL: Ulimits - Open files: 4096 (required: 65535)
+  ✅ PASS: Remote Server (192.168.1.10:34952) - Reachable
+  ```
+- Clear visibility into what needs attention
+
+### 8. **Automatic Configuration** ✅
 - **Xvfb:** Install, configure systemd service, set DISPLAY variable
 - **Firewall:** Configure firewalld/ufw/iptables based on deployment role
 - **SELinux:** Set to permissive mode (runtime + persistent)
-- **System Limits:** Configure ulimits (nofile: 65536, nproc: 4096)
+- **System Limits:** Configure ulimits (nofile: 65535, nproc: 8194)
 
-### 5. **Linux Distribution Support** ✅
+### 9. **Linux Distribution Support** ✅
 - RHEL 7, 8, 9
 - CentOS 7, 8
 - Oracle Linux 7, 8, 9
 - Ubuntu 18.04, 20.04, 22.04
 - Auto-detection of package manager (yum/dnf/apt/zypper)
 
-### 6. **Database Support** ✅
+### 10. **Database Support** ✅
 - PostgreSQL (psycopg2)
 - Oracle (cx_Oracle)
 - SQL Server (pyodbc + ODBC Driver 17)
 - MySQL/MariaDB (pymysql)
 - Auto-install database-specific drivers
 
-### 7. **Deployment Roles** ✅
+### 11. **Deployment Roles** ✅
 - **Combined:** IS + Web on same server
-  - Ports: 34952, 34962, 34972, 39321, 41080, 8080, 8443
+  - Ports: 34952, 9500, 8300-8302, 34962, 3000, 8080, 8443, 20100
 - **Web-Only:** Just Web Server
-  - Ports: 8080, 8443
+  - Ports: 8080, 8443, 20100
+  - Checks IS connectivity if IS is already installed
 - **IS-Only:** Just Intelligence Server
-  - Ports: 34952, 34962, 34972, 39321, 41080
+  - Ports: 34952, 9500, 8300-8302, 34962, 3000
+  - Checks Web connectivity if Web is already installed
 
-### 8. **Post-Installation Verification** ✅
+### 12. **Post-Installation Verification** ✅
 ```bash
 sudo mstr-helper verify
 ```
@@ -114,7 +153,7 @@ sudo mstr-helper verify
 - Platform Analytics verification
 - Library Server verification
 
-### 9. **Rollback Capability** ✅
+### 13. **Rollback Capability** ✅
 ```bash
 sudo mstr-helper rollback
 ```
@@ -123,20 +162,26 @@ sudo mstr-helper rollback
 - Restore SELinux settings
 - Restore system limits
 
-### 10. **Reporting** ✅
+### 14. **Reporting** ✅
 - **HTML Report:** User-friendly, color-coded
 - **JSON Report:** Machine-readable
 - Saved to `/var/log/mstr-helper/reports/`
 
-### 11. **Logging** ✅
+### 15. **Logging** ✅
 - Colored console output
 - Detailed file logging
 - Saved to `/var/log/mstr-helper/`
 
-### 12. **Backup System** ✅
+### 16. **Backup System** ✅
 - All config changes backed up
 - Manifest tracking
 - Stored in `/var/lib/mstr-helper/backups/`
+
+### 17. **Git Integration** ✅
+- Repository: github.com/ganimaltiok/mstr-install-helper
+- Easy updates: `cd /opt/mstr-helper && git pull`
+- Version tracking
+- Collaborative development
 
 ## Commands
 
@@ -145,9 +190,36 @@ sudo mstr-helper rollback
 
 **Steps:**
 1. Detect Linux distribution
-2. Select deployment role
-3. Configure database connection
-4. Run system checks
+2. Load saved configuration (if exists)
+3. Select deployment role (use saved default if available)
+4. Configure database connection (use saved defaults)
+5. Collect remote server IP for distributed deployments
+6. Check if remote server is installed (skip checks if not)
+7. Run system checks (CPU, RAM, Disk, Swap, FQDN)
+8. Run network checks (ports, DNS, remote server connectivity)
+9. **Auto-fix detected issues (FQDN, ulimits)**
+10. **Re-run checks after fixes**
+11. Run database connection test
+12. Install dependencies
+13. Configure Xvfb
+14. Configure firewall
+15. Configure SELinux
+16. Configure system limits
+17. **Save configuration for next run**
+18. **Display detailed pass/fail summary**
+19. Generate reports
+20. Show installation instructions
+
+**System Requirements (Official MicroStrategy):**
+- CPU: 4+ cores
+- RAM: 16 GB minimum, 64 GB recommended
+- Disk: 48 GB minimum (3x RAM), 192 GB recommended
+- Swap: 8 GB minimum
+- Ulimits:
+  - nofile: 65535
+  - nproc: 8194
+  - stack: 8388608
+  - cpu/fsize/data: unlimited
 5. Run network checks
 6. Test database connection
 7. Install dependencies

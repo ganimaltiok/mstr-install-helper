@@ -34,9 +34,19 @@ class LimitsConfig:
             self.logger.warning(f"Could not load ulimits config: {str(e)}")
             return {'nofile': 65536, 'nproc': 4096}
     
-    def configure_limits(self) -> Tuple[bool, Dict]:
-        """limits.conf dosyasını yapılandır"""
+    def configure_limits(self, username: str = None) -> Tuple[bool, Dict]:
+        """
+        limits.conf dosyasını yapılandır
+        
+        Args:
+            username: Specific user için limits (None = global/wildcard *)
+        """
         self.logger.section("System Limits Yapılandırması")
+        
+        if username:
+            self.logger.info(f"Kullanıcı-specific limits: {username}")
+        else:
+            self.logger.info("Global limits (tüm kullanıcılar)")
         
         if not Path(self.LIMITS_FILE).exists():
             self.logger.failure(f"limits.conf bulunamadı: {self.LIMITS_FILE}")
@@ -58,26 +68,29 @@ class LimitsConfig:
             nproc = self.required_limits.get('nproc', 8194)
             stack = self.required_limits.get('stack', 8388608)  # 8 MB in bytes
             
+            # User prefix (username veya wildcard *)
+            user_prefix = username if username else "*"
+            
             mstr_limits = [
                 "",
-                "# MicroStrategy Installation Requirements",
+                f"# MicroStrategy Installation Requirements ({user_prefix})",
                 "# Based on: https://www2.microstrategy.com/producthelp/current/installconfig/en-us/Content/Recommended_system_settings_for_UNIX_and_Linux.htm",
                 "# Added by mstr-helper",
-                f"*    soft    nofile    {nofile}",
-                f"*    hard    nofile    {nofile}",
-                f"*    soft    nproc     {nproc}",
-                f"*    hard    nproc     {nproc}",
-                f"*    soft    stack     {stack}",
-                f"*    hard    stack     {stack}",
+                f"{user_prefix}    soft    nofile    {nofile}",
+                f"{user_prefix}    hard    nofile    {nofile}",
+                f"{user_prefix}    soft    nproc     {nproc}",
+                f"{user_prefix}    hard    nproc     {nproc}",
+                f"{user_prefix}    soft    stack     {stack}",
+                f"{user_prefix}    hard    stack     {stack}",
                 "# Recommended unlimited settings:",
-                "*    soft    cpu       unlimited",
-                "*    hard    cpu       unlimited",
-                "*    soft    fsize     unlimited",
-                "*    hard    fsize     unlimited",
-                "*    soft    data      unlimited",
-                "*    hard    data      unlimited",
-                "*    soft    memlock   unlimited",
-                "*    hard    memlock   unlimited",
+                f"{user_prefix}    soft    cpu       unlimited",
+                f"{user_prefix}    hard    cpu       unlimited",
+                f"{user_prefix}    soft    fsize     unlimited",
+                f"{user_prefix}    hard    fsize     unlimited",
+                f"{user_prefix}    soft    data      unlimited",
+                f"{user_prefix}    hard    data      unlimited",
+                f"{user_prefix}    soft    memlock   unlimited",
+                f"{user_prefix}    hard    memlock   unlimited",
                 ""
             ]
             
@@ -109,11 +122,13 @@ class LimitsConfig:
                 self.logger.failure(f"limits.conf güncellenemedi: {stderr}")
                 return False, {'error': stderr}
             
-            self.logger.success("System limits yapılandırıldı")
+            self.logger.success(f"System limits yapılandırıldı ({user_prefix})")
             self.logger.info(f"  nofile (open files): {nofile}")
             self.logger.info(f"  nproc (processes): {nproc}")
             self.logger.info(f"  stack (stack size): {stack // 1024 // 1024} MB")
             self.logger.info(f"  cpu, fsize, data, memlock: unlimited")
+            if username:
+                self.logger.info(f"  → Sadece '{username}' kullanıcısı için geçerli")
             self.logger.warning("Not: Yeni oturumlar için geçerli olacak")
             
             # Backup manifest kaydet
@@ -122,6 +137,7 @@ class LimitsConfig:
             result = {
                 'nofile': nofile,
                 'nproc': nproc,
+                'username': username,
                 'status': 'pass'
             }
             

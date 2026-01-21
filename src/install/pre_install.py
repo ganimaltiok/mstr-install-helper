@@ -17,16 +17,18 @@ from ..config.xdisplay_config import XDisplayConfig
 from ..config.firewall_config import FirewallConfig
 from ..config.selinux_config import SELinuxConfig
 from ..config.limits_config import LimitsConfig
+from ..config.user_config import UserConfig
 
 
 class PreInstall:
     """Pre-installation hazırlıkları orkestre eder"""
     
-    def __init__(self, deployment_role: str, db_config: Dict, remote_server: Dict[str, str] = None):
+    def __init__(self, deployment_role: str, db_config: Dict, remote_server: Dict[str, str] = None, user_config: Dict = None):
         self.logger = get_logger()
         self.deployment_role = deployment_role
         self.db_config = db_config
         self.remote_server = remote_server  # {'ip': '...', 'role': '...'}
+        self.user_config = user_config  # {'create_user': bool, 'username': str}
         self.results = {
             'deployment_role': deployment_role,
             'timestamp': datetime.now().isoformat(),
@@ -111,9 +113,30 @@ class PreInstall:
         
         return passed
     
+    def configure_user(self) -> bool:
+        """MicroStrategy kullanıcısını yapılandır (opsiyonel)"""
+        if not self.user_config or not self.user_config.get('create_user'):
+            self.logger.info("MicroStrategy kullanıcısı oluşturulmayacak (atlandı)")
+            return True
+        
+        self.logger.section("ADIM 5: MicroStrategy Kullanıcı Konfigürasyonu")
+        
+        username = self.user_config.get('username', 'mstr')
+        
+        config = UserConfig()
+        results = config.configure_user(username=username, enable_sudo=True)
+        
+        self.results['configurations']['user'] = {
+            'success': results['success'],
+            'results': results
+        }
+        
+        return results['success']
+    
     def configure_xdisplay(self) -> bool:
         """X Display yapılandır"""
-        self.logger.section("ADIM 5: X Display Yapılandırması")
+        step_num = 6 if self.user_config and self.user_config.get('create_user') else 5
+        self.logger.section(f"ADIM {step_num}: X Display Yapılandırması")
         
         config = XDisplayConfig()
         success, results = config.configure()
@@ -127,7 +150,8 @@ class PreInstall:
     
     def configure_firewall(self) -> bool:
         """Firewall yapılandır"""
-        self.logger.section("ADIM 6: Firewall Yapılandırması")
+        step_num = 7 if self.user_config and self.user_config.get('create_user') else 6
+        self.logger.section(f"ADIM {step_num}: Firewall Yapılandırması")
         
         config = FirewallConfig(deployment_role=self.deployment_role)
         success, results = config.configure()
@@ -141,7 +165,8 @@ class PreInstall:
     
     def configure_selinux(self) -> bool:
         """SELinux yapılandır"""
-        self.logger.section("ADIM 7: SELinux Yapılandırması")
+        step_num = 8 if self.user_config and self.user_config.get('create_user') else 7
+        self.logger.section(f"ADIM {step_num}: SELinux Yapılandırması")
         
         config = SELinuxConfig()
         success, results = config.configure()
@@ -155,10 +180,16 @@ class PreInstall:
     
     def configure_limits(self) -> bool:
         """System limits yapılandır"""
-        self.logger.section("ADIM 8: System Limits Yapılandırması")
+        step_num = 9 if self.user_config and self.user_config.get('create_user') else 8
+        self.logger.section(f"ADIM {step_num}: System Limits Yapılandırması")
+        
+        # User-specific veya global limits
+        username = None
+        if self.user_config and self.user_config.get('create_user'):
+            username = self.user_config.get('username', 'mstr')
         
         config = LimitsConfig()
-        success, results = config.configure()
+        success, results = config.configure_limits(username=username)
         
         self.results['configurations']['limits'] = {
             'success': success,
@@ -198,6 +229,10 @@ class PreInstall:
                 'network': {
                     'remote_server_ip': self.remote_server.get('ip') if self.remote_server else None,
                     'remote_server_role': self.remote_server.get('role') if self.remote_server else None
+                },
+                'user': {
+                    'create_user': self.user_config.get('create_user', False) if self.user_config else False,
+                    'username': self.user_config.get('username') if self.user_config else None
                 },
                 'installation': {
                     'status': 'prepared',
@@ -308,18 +343,28 @@ class PreInstall:
         """Tüm hazırlık adımlarını çalıştır"""
         self.logger.section("MicroStrategy Kurulum Hazırlığı Başlıyor")
         self.logger.info(f"Deployment Role: {self.deployment_role}")
-        self.logger.info(f"Database: {self.db_config['type']}\n")
+        self.logger.info(f"Database: {self.db_config['type']}")
+        if self.user_config and self.user_config.get('create_user'):
+            self.logger.info(f"MicroStrategy User: {self.user_config.get('username', 'mstr')}")
+        self.logger.info("")
         
         steps = [
             ("Sistem Kontrolleri", self.run_system_checks),
             ("Network Kontrolleri", self.run_network_checks),
             ("Database Kontrolleri", self.run_database_checks),
             ("Paket Bağımlılıkları", self.install_dependencies),
+        ]
+        
+        # User configuration adımını conditional ekle
+        if self.user_config and self.user_config.get('create_user'):
+            steps.append(("MicroStrategy Kullanıcı Konfigürasyonu", self.configure_user))
+        
+        steps.extend([
             ("X Display Yapılandırması", self.configure_xdisplay),
             ("Firewall Yapılandırması", self.configure_firewall),
             ("SELinux Yapılandırması", self.configure_selinux),
             ("System Limits Yapılandırması", self.configure_limits)
-        ]
+        ])
         
         failed_steps = []
         

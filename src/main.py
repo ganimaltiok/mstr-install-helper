@@ -48,6 +48,9 @@ def command_prepare():
     # Deployment role seçimi
     deployment_role = cli.select_deployment_role()
     
+    # User configuration
+    user_config = cli.get_user_config()
+    
     # Remote sunucu bilgisi (distributed deployment için)
     remote_server = cli.get_remote_server_ip(deployment_role)
     
@@ -55,12 +58,12 @@ def command_prepare():
     db_config = cli.get_database_config()
     
     # Onay
-    if not cli.confirm_configuration(deployment_role, db_config, remote_server):
+    if not cli.confirm_configuration(deployment_role, db_config, remote_server, user_config):
         logger.info("İşlem iptal edildi.")
         sys.exit(0)
     
     # Pre-installation
-    pre_install = PreInstall(deployment_role, db_config, remote_server)
+    pre_install = PreInstall(deployment_role, db_config, remote_server, user_config)
     success, results = pre_install.run()
     
     # Rapor oluştur
@@ -80,7 +83,7 @@ def command_prepare():
     logger.info(f"  HTML: {html_report}")
     
     # Completion mesajı (özet ile birlikte)
-    cli.show_completion(success, results)
+    cli.show_completion(success, results, user_config)
     
     sys.exit(0 if success else 1)
 

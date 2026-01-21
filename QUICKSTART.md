@@ -83,25 +83,36 @@ sudo mstr-helper prepare
 **Bu komut:**
 1. ✅ Linux dağıtımını tespit eder
 2. ✅ Deployment tipini sorar (Combined/Web-Only/IS-Only)
-3. ✅ Veritabanı bilgilerini sorar (PostgreSQL/Oracle/SQL Server/MySQL)
-4. ✅ Sistem kontrollerini yapar (CPU, RAM, Disk, Swap)
-5. ✅ Network kontrollerini yapar (portlar, DNS)
-6. ✅ Database bağlantısını test eder
-7. ✅ Gerekli paketleri yükler (Java, ODBC, X11 libs, vs.)
-8. ✅ Xvfb kurar ve yapılandırır
-9. ✅ Firewall kurallarını ekler
-10. ✅ SELinux'u permissive yapar
-11. ✅ System limits ayarlar
-12. ✅ HTML ve JSON rapor oluşturur
-13. ✅ Kurulum talimatlarını gösterir
+3. ✅ **MicroStrategy kullanıcısı oluşturulsun mu sorar (opsiyonel, best practice)**
+4. ✅ Veritabanı bilgilerini sorar (PostgreSQL/Oracle/SQL Server/MySQL)
+5. ✅ Distributed deployment için remote sunucu IP'si sorar
+6. ✅ Sistem kontrollerini yapar (CPU, RAM, Disk, Swap, FQDN)
+7. ✅ Network kontrollerini yapar (portlar, DNS, remote sunucu erişimi)
+8. ✅ Database bağlantısını test eder
+9. ✅ **Tespit edilen sorunları otomatik düzeltir (FQDN, ulimits)**
+10. ✅ **Özel kullanıcı oluşturur (isterseniz) - sudo yetkili, home directory hazır**
+11. ✅ Gerekli paketleri yükler (Java, ODBC, X11 libs, vs.)
+12. ✅ Xvfb kurar ve yapılandırır
+13. ✅ Firewall kurallarını ekler
+14. ✅ SELinux'u permissive yapar
+15. ✅ System limits ayarlar (user-specific veya global)
+16. ✅ **Tüm cevapları kaydeder (sonraki çalıştırmalarda default olur)**
+17. ✅ **Detaylı pass/fail özeti gösterir**
+18. ✅ HTML ve JSON rapor oluşturur
+19. ✅ Kurulum talimatlarını gösterir
 
-**Örnek Akış:**
+**Örnek Akış (İlk Çalıştırma):**
 ```
 === Deployment Tipi Seçin ===
 1. Combined - Intelligence Server + Web Server (aynı sunucu)
 2. Web-Only - Sadece Web Server
 3. IS-Only - Sadece Intelligence Server
-Seçiminiz: 1
+Seçiminiz: 2
+
+=== Distributed Deployment - Remote Server ===
+Intelligence Server IP adresi: 192.168.1.10
+Intelligence Server kurulu mu? (E/h): E
+[INFO] Remote server portlarını kontrol ediyorum...
 
 === Veritabanı Tipi Seçin ===
 1. PostgreSQL
@@ -117,6 +128,41 @@ Kullanıcı Adı [mstr_admin]: mstr_user
 Şifre: ********
 
 Bu ayarlarla devam edilsin mi? (E/h): E
+
+[INFO] Konfigürasyon kaydedildi: /opt/mstr-helper/config/deployment.yaml
+
+=== Execution Summary ===
+✅ PASS: CPU Cores (8 cores) - OK
+✅ PASS: RAM (32 GB) - OK
+✅ PASS: Disk Space (150 GB free) - OK
+❌ FAIL: Hostname FQDN - Hostname does not resolve to FQDN
+✅ PASS: Firewall Port 8080 - Port available
+✅ PASS: Remote Server (192.168.1.10:34952) - Reachable
+❌ FAIL: Ulimits - Open files: 4096 (required: 65535)
+
+[INFO] Sorunlar tespit edildi. Otomatik düzeltme başlatılıyor...
+[SUCCESS] /etc/hosts düzeltildi: web-server.localdomain eklendi
+[SUCCESS] /etc/security/limits.conf güncellendi
+[INFO] Yeni oturum açarak ulimits değişikliklerini aktifleştirin
+
+[INFO] Kontroller tekrar yapılıyor...
+✅ Tüm kontroller başarılı!
+```
+
+**Sonraki Çalıştırmalarda:**
+```
+=== Deployment Tipi Seçin ===
+1. Combined - Intelligence Server + Web Server (aynı sunucu)
+2. Web-Only - Sadece Web Server
+3. IS-Only - Sadece Intelligence Server
+Seçiminiz [2]: ← Enter (önceki değer kullanılır)
+
+=== Distributed Deployment - Remote Server ===
+Intelligence Server IP adresi [192.168.1.10]: ← Enter (önceki değer)
+Intelligence Server kurulu mu? (E/h) [E]: ← Enter
+
+=== Veritabanı Tipi Seçin ===
+...
 ```
 
 ### Komut 2: MicroStrategy Kurulumu (Manuel)
@@ -192,11 +238,31 @@ sudo mstr-helper verify
 
 ### Senaryo 2: Distributed (İki Sunucu)
 
-**Web Sunucusu:**
+**IS Sunucusu (Önce Kurulur):**
+```bash
+sudo mstr-helper prepare
+# Deployment: IS-Only seçin
+# Database bilgilerini girin
+# Web Server IP'si: 192.168.1.11
+# Web Server kurulu mu?: h (hayır - henüz kurulmadı)
+# [Remote server kontrolleri atlanır]
+
+# MicroStrategy installer'ı çalıştırın
+sudo ./MicroStrategy-*.sh
+# Sadece IS seçin
+
+# Doğrulama
+sudo mstr-helper verify
+```
+
+**Web Sunucusu (Sonra Kurulur):**
 ```bash
 sudo mstr-helper prepare
 # Deployment: Web-Only seçin
 # Database gerekmiyor (IS'den okur)
+# IS Server IP'si: 192.168.1.10
+# IS Server kurulu mu?: E (evet - önceki adımda kuruldu)
+# [IS portları kontrol edilir: 34952, 9500, vb.]
 
 sudo ./MicroStrategy-*.sh
 # Sadece Web Server seçin
