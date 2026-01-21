@@ -85,8 +85,6 @@ class PreInstall:
             'passed': passed,
             'results': results
         }
-            'results': results
-        }
         
         return passed
     
