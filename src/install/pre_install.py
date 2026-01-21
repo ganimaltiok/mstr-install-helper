@@ -77,12 +77,14 @@ class PreInstall:
                     checker.results['ulimits']['status'] = 'pass'
                     checker.results['ulimits']['auto_fixed'] = True
                 
-                # Genel durumu güncelle
+                # Genel durumu güncelle - ÖNEMLİ: results değişkenini de güncelle!
                 passed = True
-                results = checker.results
+                results = checker.results  # Bu satır kritik!
         
         self.results['checks']['system'] = {
             'passed': passed,
+            'results': results
+        }
             'results': results
         }
         
@@ -648,15 +650,18 @@ class PreInstall:
             self.logger.success("✓ TÜM HAZIRLIKLAR TAMAMLANDI!")
             self.logger.success("Sunucu MicroStrategy kurulumu için hazır.\n")
             
-            # Kurulum kopya kağıdı oluştur
+            # Kurulum kopya kağıdı oluştur ve göster
             self.save_installation_cheatsheet()
-            
             self.show_installation_instructions()
             return True, self.results
         else:
             self.logger.failure("✗ BAZI HAZIRLIKLAR BAŞARISIZ!")
             self.logger.failure(f"Başarısız adımlar: {', '.join(failed_steps)}\n")
             self.logger.info("Lütfen hataları düzeltin ve tekrar çalıştırın.")
+            
+            # Hata olsa bile kurulum yardımını göster (partial success durumu için)
+            self.logger.info("")
+            self.save_installation_cheatsheet()
             return False, self.results
 
 
