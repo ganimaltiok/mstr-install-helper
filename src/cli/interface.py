@@ -126,15 +126,23 @@ class CLIInterface:
         # Kullanıcı adı
         username = self.get_input("Kullanıcı adı", default_username)
         
+        # Şifre
+        import getpass
+        password = getpass.getpass(f"{username} kullanıcısı için şifre [mstr]: ")
+        if not password:
+            password = "mstr"
+        
         print(f"\n{Fore.GREEN}✓ Kullanıcı yapılandırması:{Style.RESET_ALL}")
         print(f"  • Kullanıcı: {username}")
+        print(f"  • Şifre: {'*' * len(password)}")
         print(f"  • Sudo: Full access")
         print(f"  • Home: /home/{username}")
         print()
         
         return {
             'create_user': True,
-            'username': username
+            'username': username,
+            'password': password
         }
     
     def select_deployment_role(self) -> str:

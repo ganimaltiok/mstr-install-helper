@@ -105,6 +105,52 @@ class UserConfig:
             self.logger.error(result['message'])
             return result
     
+    def set_user_password(self, username, password):
+        """
+        Set password for user.
+        
+        Args:
+            username: Username
+            password: Password to set
+        
+        Returns:
+            dict: Result with success status
+        """
+        result = {
+            'success': False,
+            'username': username,
+            'message': ''
+        }
+        
+        try:
+            # Check if user exists
+            if not self.user_exists(username):
+                result['message'] = f"User '{username}' does not exist"
+                self.logger.error(result['message'])
+                return result
+            
+            self.logger.info(f"Setting password for '{username}'...")
+            
+            # Use chpasswd to set password
+            cmd = f"echo '{username}:{password}' | chpasswd"
+            success, output, error = self.runner.run_command(cmd, shell=True)
+            
+            if not success:
+                result['message'] = f"Failed to set password: {error}"
+                self.logger.error(result['message'])
+                return result
+            
+            self.logger.success(f"Password set for '{username}'")
+            result['success'] = True
+            result['message'] = f"Password configured successfully"
+            
+            return result
+            
+        except Exception as e:
+            result['message'] = f"Error setting password: {str(e)}"
+            self.logger.error(result['message'])
+            return result
+    
     def configure_sudo_access(self, username='mstr'):
         """
         Configure sudo access for MicroStrategy user.
@@ -251,12 +297,13 @@ Defaults:{username} !requiretty
             self.logger.error(result['message'])
             return result
     
-    def configure_user(self, username='mstr', enable_sudo=True):
+    def configure_user(self, username='mstr', password='mstr', enable_sudo=True):
         """
         Complete user configuration workflow.
         
         Args:
             username: Username to configure (default: mstr)
+            password: Password for the user (default: mstr)
             enable_sudo: Enable sudo access (default: True)
         
         Returns:
@@ -281,7 +328,15 @@ Defaults:{username} !requiretty
                 results['message'] = 'User creation failed'
                 return results
             
-            # Step 2: Setup home directory
+            # Step 2: Set password
+            password_result = self.set_user_password(username, password)
+            results['steps']['password_setup'] = password_result
+            
+            if not password_result['success']:
+                results['message'] = 'Password setup failed'
+                return results
+            
+            # Step 3: Setup home directory
             home_result = self.setup_home_directory(username)
             results['steps']['home_setup'] = home_result
             
@@ -289,7 +344,7 @@ Defaults:{username} !requiretty
                 results['message'] = 'Home directory setup failed'
                 return results
             
-            # Step 3: Configure sudo (if requested)
+            # Step 4: Configure sudo (if requested)
             if enable_sudo:
                 sudo_result = self.configure_sudo_access(username)
                 results['steps']['sudo_config'] = sudo_result
@@ -311,8 +366,12 @@ Defaults:{username} !requiretty
             self.logger.info(f"Home Directory: {home_result.get('home_dir', 'N/A')}")
             self.logger.info(f"UID: {user_result['details'].get('uid', 'N/A')}")
             self.logger.info(f"GID: {user_result['details'].get('gid', 'N/A')}")
+            self.logger.info(f"Password: {'*' * len(password)}")
             if enable_sudo:
                 self.logger.info(f"Sudo Access: Enabled")
+            self.logger.info("")
+            self.logger.warning(f"SSH Login: ssh {username}@hostname")
+            self.logger.warning(f"Local Login: su - {username}")
             self.logger.info("")
             
             return results

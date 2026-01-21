@@ -122,9 +122,10 @@ class PreInstall:
         self.logger.section("ADIM 5: MicroStrategy Kullanıcı Konfigürasyonu")
         
         username = self.user_config.get('username', 'mstr')
+        password = self.user_config.get('password', 'mstr')
         
         config = UserConfig()
-        results = config.configure_user(username=username, enable_sudo=True)
+        results = config.configure_user(username=username, password=password, enable_sudo=True)
         
         self.results['configurations']['user'] = {
             'success': results['success'],

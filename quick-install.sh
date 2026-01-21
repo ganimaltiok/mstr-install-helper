@@ -105,23 +105,9 @@ mkdir -p "$INSTALL_DIR"
 
 # Dosyaları kopyala (git klasörü dahil)
 echo "Dosyalar kopyalanıyor: $TEMP_DIR -> $INSTALL_DIR"
-
-# .git klasörü de dahil tüm dosyaları kopyala
-rsync -av --delete \
-    --exclude='*.pyc' \
-    --exclude='__pycache__' \
-    "$TEMP_DIR/" "$INSTALL_DIR/"
-
-# .git klasörünün kopyalandığını doğrula
-if [ -d "$INSTALL_DIR/.git" ]; then
-    echo -e "${GREEN}✓ Git repository başarıyla kopyalandı${NC}"
-    # Git config ayarla
-    cd "$INSTALL_DIR"
-    git config --local core.filemode false
-else
-    echo -e "${YELLOW}⚠ .git klasörü kopyalanamadı, git pull çalışmayabilir${NC}"
-    echo -e "${YELLOW}  Çözüm için: cat /opt/mstr-helper/FIX_GIT_REPO.md${NC}"
-fi
+cp -r "$TEMP_DIR"/* "$INSTALL_DIR/"
+cp -r "$TEMP_DIR"/.git "$INSTALL_DIR/" 2>/dev/null || true
+cp "$TEMP_DIR"/.gitignore "$INSTALL_DIR/" 2>/dev/null || true
 
 # Python bağımlılıklarını kur
 echo -e "\n${YELLOW}[6/6] Python bağımlılıkları kuruluyor...${NC}"
@@ -159,11 +145,8 @@ echo -e "${BLUE}Kullanım:${NC}"
 echo "  1. Sunucu hazırlığı:    ${GREEN}sudo mstr-helper prepare${NC}"
 echo "  2. Kurulum doğrulama:   ${GREEN}sudo mstr-helper verify${NC}"
 echo "  3. Geri alma:           ${GREEN}sudo mstr-helper rollback${NC}"
-echo "  4. Güncelleme:          ${GREEN}cd /opt/mstr-helper && sudo git pull${NC}"
 echo ""
 echo -e "${BLUE}Log dosyaları:${NC} /var/log/mstr-helper/"
 echo -e "${BLUE}Yapılandırma:${NC} /opt/mstr-helper/config/"
 echo ""
 echo -e "${YELLOW}Kuruluma başlamak için 'sudo mstr-helper prepare' komutunu çalıştırın${NC}"
-echo ""
-echo -e "${BLUE}Not:${NC} Git pull çalışmazsa: ${YELLOW}cat /opt/mstr-helper/FIX_GIT_REPO.md${NC}"
