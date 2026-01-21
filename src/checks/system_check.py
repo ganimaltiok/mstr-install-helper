@@ -251,19 +251,121 @@ class SystemCheck:
         rc2, fqdn, _ = self.runner.run("hostname -f")
         
         result = {
-            'hostname': hostname,
-            'fqdn': fqdn,
-            'resolvable': fqdn != hostname and '.' in fqdn,
-            'status': 'pass' if fqdn and '.' in fqdn else 'warning'
+            'hostname': hostname.strip() if hostname else '',
+            'fqdn': fqdn.strip() if fqdn else '',
+            'resolvable': fqdn and '.' in fqdn and fqdn != hostname,
+            'status': 'pass' if fqdn and '.' in fqdn else 'warning',
+            'needs_fix': not (fqdn and '.' in fqdn)
         }
         
         if result['resolvable']:
-            self.logger.success(f"Hostname: {hostname} (FQDN: {fqdn})")
+            self.logger.success(f"Hostname: {hostname.strip()} (FQDN: {fqdn.strip()})")
         else:
-            self.logger.warning(f"Hostname: {hostname} (FQDN çözümlenemedi, DNS ayarlarını kontrol edin)")
+            self.logger.warning(f"Hostname: {hostname.strip()} (FQDN çözümlenemedi, DNS ayarlarını kontrol edin)")
         
         self.results['hostname'] = result
         return True, result  # Warning olsa da devam eder
+    
+    def fix_hostname_fqdn(self) -> bool:
+        """FQDN sorununu /etc/hosts dosyasını düzenleyerek çöz"""
+        hostname_data = self.results.get('hostname', {})
+        
+        if not hostname_data.get('needs_fix'):
+            return True
+        
+        self.logger.subsection("FQDN Sorunu Düzeltiliyor")
+        
+        hostname = hostname_data.get('hostname', '').strip()
+        if not hostname:
+            self.logger.failure("Hostname alınamadı")
+            return False
+        
+        # FQDN oluştur
+        fqdn = f"{hostname}.localdomain"
+        
+        # IP adresi al
+        rc, ip_output, _ = self.runner.run("hostname -I")
+        ip_address = ip_output.strip().split()[0] if ip_output else "127.0.0.1"
+        
+        try:
+            # /etc/hosts dosyasını oku
+            hosts_file = "/etc/hosts"
+            from ..utils.backup_manager import get_backup_manager
+            backup = get_backup_manager()
+            
+            # Backup al
+            if Path(hosts_file).exists():
+                backup.backup_file(hosts_file, "System hosts file")
+            
+            rc, content, _ = self.runner.run(f"cat {hosts_file}")
+            if rc != 0:
+                self.logger.failure("hosts dosyası okunamadı")
+                return False
+            
+            lines = content.split('\n') if content else []
+            new_lines = []
+            hostname_added = False
+            
+            # Mevcut hostname girdilerini temizle ve yeni ekle
+            for line in lines:
+                # Bu hostname'i içeren satırları atla
+                if hostname in line and not line.strip().startswith('#'):
+                    continue
+                new_lines.append(line)
+            
+            # Yeni FQDN girdisini ekle (127.0.0.1'den önce)
+            new_entry = f"{ip_address}  {fqdn} {hostname}"
+            
+            # 127.0.0.1 satırından önce ekle
+            final_lines = []
+            inserted = False
+            for line in new_lines:
+                if '127.0.0.1' in line and not inserted:
+                    final_lines.append(new_entry)
+                    inserted = True
+                final_lines.append(line)
+            
+            if not inserted:
+                final_lines.insert(0, new_entry)
+            
+            new_content = '\n'.join(final_lines)
+            
+            # Dosyayı güncelle
+            temp_file = "/tmp/hosts_temp"
+            with open(temp_file, 'w') as f:
+                f.write(new_content)
+            
+            rc, _, stderr = self.runner.run_sudo(f"cp {temp_file} {hosts_file}")
+            self.runner.run(f"rm -f {temp_file}", shell=True)
+            
+            if rc != 0:
+                self.logger.failure(f"hosts dosyası güncellenemedi: {stderr}")
+                return False
+            
+            backup.save_manifest()
+            
+            self.logger.success(f"FQDN düzeltildi: {hostname} → {fqdn}")
+            self.logger.info(f"Eklenen satır: {new_entry}")
+            self.logger.warning("Değişikliğin tam etkili olması için yeniden giriş yapın")
+            
+            return True
+            
+        except Exception as e:
+            self.logger.failure(f"FQDN düzeltme hatası: {str(e)}")
+            return False
+    
+    def fix_ulimits(self) -> bool:
+        """Ulimits uyarısı - zaten limits_config.py tarafından yapılandırılıyor"""
+        ulimits_data = self.results.get('ulimits', {})
+        
+        if ulimits_data.get('status') == 'fail':
+            self.logger.warning("\nUlimits yapılandırması yapıldı ancak şu anki session'da görünmüyor.")
+            self.logger.warning("Değişikliklerin geçerli olması için:")
+            self.logger.info("  1. SSH oturumunu kapatıp tekrar açın (logout/login)")
+            self.logger.info("  2. Veya sunucuyu yeniden başlatın (reboot)")
+            return False
+        
+        return True
     
     def run_all_checks(self) -> Tuple[bool, Dict]:
         """Tüm sistem kontrollerini çalıştır"""
@@ -286,6 +388,30 @@ class SystemCheck:
             self.logger.failure("\nBazı sistem kontrolleri başarısız!")
         
         return all_passed, self.results
+    
+    def fix_issues(self) -> bool:
+        """Tespit edilen sorunları otomatik düzelt"""
+        self.logger.section("Sorunlar Düzeltiliyor")
+        
+        fixed_count = 0
+        total_issues = 0
+        
+        # Hostname/FQDN sorunu
+        if self.results.get('hostname', {}).get('needs_fix'):
+            total_issues += 1
+            if self.fix_hostname_fqdn():
+                fixed_count += 1
+        
+        # Ulimits uyarısı
+        if self.results.get('ulimits', {}).get('status') == 'fail':
+            total_issues += 1
+            self.fix_ulimits()  # Bu sadece uyarı verir
+        
+        if total_issues > 0:
+            self.logger.info(f"\n{fixed_count}/{total_issues} sorun düzeltildi")
+            return fixed_count > 0
+        
+        return True
 
 
 if __name__ == '__main__':

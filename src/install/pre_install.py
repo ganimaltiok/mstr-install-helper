@@ -41,6 +41,15 @@ class PreInstall:
         checker = SystemCheck()
         passed, results = checker.run_all_checks()
         
+        # Başarısız kontroller varsa otomatik düzeltme dene
+        if not passed:
+            self.logger.info("\n⚠ Bazı sistem kontrolleri başarısız, otomatik düzeltme deneniyor...")
+            checker.fix_issues()
+            
+            # Tekrar kontrol et
+            self.logger.info("\nSistem kontrolleri tekrar yapılıyor...")
+            passed, results = checker.run_all_checks()
+        
         self.results['checks']['system'] = {
             'passed': passed,
             'results': results
