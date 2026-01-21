@@ -192,8 +192,9 @@ class SystemCheck:
         """ulimit kontrolü"""
         self.logger.subsection("System Limits Kontrolü")
         
-        required_nofile = self.requirements.get('ulimits', {}).get('nofile', 65536)
-        required_nproc = self.requirements.get('ulimits', {}).get('nproc', 4096)
+        # Config'ten yükle, yoksa MicroStrategy önerilen değerleri kullan
+        required_nofile = self.requirements.get('ulimits', {}).get('nofile', 65535)
+        required_nproc = self.requirements.get('ulimits', {}).get('nproc', 8194)
         
         # Open files limit
         rc, nofile_soft, _ = self.runner.run("ulimit -Sn", shell=True)
