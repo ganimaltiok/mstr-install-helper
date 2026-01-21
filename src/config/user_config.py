@@ -77,7 +77,8 @@ class UserConfig:
                 username
             ])
             
-            success, output, error = self.runner.run_command(' '.join(cmd_parts))
+            rc, output, error = self.runner.run(' '.join(cmd_parts))
+            success = (rc == 0)
             
             if not success:
                 result['message'] = f"Failed to create user: {error}"
@@ -133,7 +134,8 @@ class UserConfig:
             
             # Use chpasswd to set password
             cmd = f"echo '{username}:{password}' | chpasswd"
-            success, output, error = self.runner.run_command(cmd, shell=True)
+            rc, output, error = self.runner.run(cmd, shell=True)
+            success = (rc == 0)
             
             if not success:
                 result['message'] = f"Failed to set password: {error}"
@@ -198,9 +200,10 @@ Defaults:{username} !requiretty
                 os.chmod(sudoers_path, 0o440)
                 
                 # Verify syntax with visudo
-                success, output, error = self.runner.run_command(
+                rc, output, error = self.runner.run(
                     f'visudo -c -f {sudoers_path}'
                 )
+                success = (rc == 0)
                 
                 if not success:
                     # Remove invalid file
