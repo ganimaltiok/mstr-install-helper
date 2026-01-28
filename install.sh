@@ -64,11 +64,15 @@ fi
 echo -e "\n${YELLOW}[3/5] Kurulum dizini hazırlanıyor...${NC}"
 mkdir -p "$INSTALL_DIR"
 
-# Dosyaları kopyala
+# Dosyaları kopyala (sadece farklı dizindeyse)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-echo "Dosyalar kopyalanıyor: $SCRIPT_DIR -> $INSTALL_DIR"
 
-cp -r "$SCRIPT_DIR"/* "$INSTALL_DIR/"
+if [ "$SCRIPT_DIR" != "$INSTALL_DIR" ]; then
+    echo "Dosyalar kopyalanıyor: $SCRIPT_DIR -> $INSTALL_DIR"
+    cp -r "$SCRIPT_DIR"/* "$INSTALL_DIR/"
+else
+    echo "Zaten doğru dizindesiniz: $INSTALL_DIR (kopyalama atlanıyor)"
+fi
 
 # Python bağımlılıklarını kur
 echo -e "\n${YELLOW}[4/5] Python bağımlılıkları kuruluyor...${NC}"
