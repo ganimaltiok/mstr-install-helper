@@ -273,6 +273,22 @@ Defaults:{username} !requiretty
                 os.chown(directory, uid, gid)
                 result['directories'].append(directory)
             
+            # Setup X11 forwarding for GUI applications
+            self.logger.info(f"Configuring X11 forwarding for '{username}'...")
+            
+            # Create .Xauthority file with correct permissions
+            xauthority_file = f'{home_dir}/.Xauthority'
+            if not os.path.exists(xauthority_file):
+                # Create empty .Xauthority file
+                with open(xauthority_file, 'w') as f:
+                    pass
+                os.chmod(xauthority_file, 0o600)
+                os.chown(xauthority_file, uid, gid)
+                self.logger.success(f"Created .Xauthority file for X11 forwarding")
+            
+            # Ensure home directory has correct permissions for SSH X11 forwarding
+            os.chmod(home_dir, 0o755)
+            
             # Set ownership of home directory
             for root, dirs, files in os.walk(home_dir):
                 for d in dirs:

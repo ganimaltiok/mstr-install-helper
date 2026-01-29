@@ -345,11 +345,18 @@ class PreInstall:
             if self.user_config and self.user_config.get('create_user'):
                 username = self.user_config.get('username', 'mstr')
                 content.append("=" * 80)
-                content.append("KULLANICI BİLGİSİ")
+                content.append("KULLANICI BİLGİSİ VE GUI KURULUM")
                 content.append("=" * 80)
                 content.append(f"MicroStrategy User: {username}")
-                content.append(f"Kurulum Öncesi: su - {username}")
-                content.append(f"Kurulum Komutu: sudo ./MicroStrategy-*.sh")
+                content.append("")
+                content.append("X11 FORWARDING İLE GUI KURULUM:")
+                content.append(f"1. SSH ile bağlan: ssh -X {username}@{hostname}")
+                content.append(f"2. MobaXterm: X11-Forwarding seçeneği aktif olmalı")
+                content.append(f"3. DISPLAY otomatik ayarlanır (localhost:10.0)")
+                content.append(f"4. Installer'ı çalıştır: cd installers && ./setup.sh")
+                content.append("")
+                content.append("NOT: .Xauthority dosyası otomatik oluşturuldu")
+                content.append("     X11 forwarding sorunsuz çalışacaktır")
                 content.append("")
             
             # Deployment seçimi

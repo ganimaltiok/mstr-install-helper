@@ -269,11 +269,29 @@ echo "mstr ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/mstr-mstr
 /home/mstr/backups
 /home/mstr/installers
 
+# X11 Forwarding için .Xauthority
+touch /home/mstr/.Xauthority
+chmod 600 /home/mstr/.Xauthority
+# SSH X11 forwarding sorunsuz çalışır
+
 # User-specific ulimits
 mstr soft nofile 65535
 mstr hard nofile 65535
 mstr soft nproc 8194
 ...
+```
+
+**GUI Kurulum (X11 Forwarding):**
+```bash
+# SSH ile X11 forwarding aktif bağlan (MobaXterm otomatik yapar)
+ssh -X mstr@sunucu_ip
+
+# DISPLAY otomatik ayarlanır
+echo $DISPLAY  # localhost:10.0
+
+# MicroStrategy installer GUI açılır
+cd ~/installers
+./MicroStrategy-*.sh
 ```
 
 **Kurulum Talimatı:**
