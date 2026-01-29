@@ -216,12 +216,12 @@ class LimitsConfig:
             self.logger.warning(f"sysctl yapılandırma hatası: {str(e)}")
             return True, {'status': 'warning'}
     
-    def configure(self) -> Tuple[bool, Dict]:
+    def configure(self, username: str = None) -> Tuple[bool, Dict]:
         """Tüm system limits yapılandırmalarını yap"""
         results = {}
         
         # limits.conf
-        success_limits, result_limits = self.configure_limits()
+        success_limits, result_limits = self.configure_limits(username=username)
         results['limits'] = result_limits
         
         # sysctl (opsiyonel)

@@ -219,7 +219,8 @@ class PreInstall:
             username = self.user_config.get('username', 'mstr')
         
         config = LimitsConfig()
-        success, results = config.configure_limits(username=username)
+        # Configure both limits.conf and sysctl.conf
+        success, results = config.configure(username=username)
         
         self.results['configurations']['limits'] = {
             'success': success,
