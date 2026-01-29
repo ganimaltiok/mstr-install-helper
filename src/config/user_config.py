@@ -286,6 +286,35 @@ Defaults:{username} !requiretty
                 os.chown(xauthority_file, uid, gid)
                 self.logger.success(f"Created .Xauthority file for X11 forwarding")
             
+            # Configure DISPLAY variable in .bashrc
+            bashrc_file = f'{home_dir}/.bashrc'
+            display_config = '''
+# MicroStrategy GUI - X Display Configuration
+# If DISPLAY is not set by SSH X11 forwarding, use Xvfb
+if [ -z "$DISPLAY" ]; then
+    export DISPLAY=:99
+fi
+'''
+            
+            # Check if already configured
+            bashrc_exists = os.path.exists(bashrc_file)
+            if bashrc_exists:
+                with open(bashrc_file, 'r') as f:
+                    bashrc_content = f.read()
+                if 'MicroStrategy GUI - X Display Configuration' not in bashrc_content:
+                    # Append to existing .bashrc
+                    with open(bashrc_file, 'a') as f:
+                        f.write(display_config)
+                    os.chown(bashrc_file, uid, gid)
+                    self.logger.success(f"Added DISPLAY configuration to .bashrc")
+            else:
+                # Create .bashrc with DISPLAY config
+                with open(bashrc_file, 'w') as f:
+                    f.write(display_config)
+                os.chmod(bashrc_file, 0o644)
+                os.chown(bashrc_file, uid, gid)
+                self.logger.success(f"Created .bashrc with DISPLAY configuration")
+            
             # Ensure home directory has correct permissions for SSH X11 forwarding
             os.chmod(home_dir, 0o755)
             
