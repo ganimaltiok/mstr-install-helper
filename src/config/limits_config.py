@@ -168,6 +168,8 @@ class LimitsConfig:
                 "# Added by mstr-helper",
                 "fs.file-max = 2097152",
                 "kernel.pid_max = 65536",
+                "# Required for Platform Analytics (Strategy One)",
+                "vm.max_map_count = 5242880",
                 ""
             ]
             

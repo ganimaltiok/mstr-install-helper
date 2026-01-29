@@ -25,6 +25,8 @@ distributions:
       - xorg-x11-server-Xvfb
       - java-11-openjdk
       - java-11-openjdk-devel
+      - libnsl  # Required for Strategy One (Platform Analytics)
+      - openldap-compat  # Provides libldap_r-2.4.so.2
     
     database_drivers:
       PostgreSQL:
@@ -62,6 +64,8 @@ distributions:
       - xorg-x11-server-Xvfb
       - java-11-openjdk
       - java-11-openjdk-devel
+      - libnsl  # Required for Strategy One (Platform Analytics)
+      - openldap-compat  # Provides libldap_r-2.4.so.2
     
     database_drivers:
       PostgreSQL:
@@ -132,6 +136,8 @@ distributions:
       - xorg-x11-server-Xvfb
       - java-11-openjdk
       - java-11-openjdk-devel
+      - libnsl  # Required for Strategy One (Platform Analytics)
+      - openldap-compat  # Provides libldap_r-2.4.so.2
     
     database_drivers:
       PostgreSQL:
