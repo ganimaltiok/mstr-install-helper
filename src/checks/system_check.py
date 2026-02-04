@@ -326,31 +326,28 @@ class SystemCheck:
             
             lines = content.split('\n') if content else []
             new_lines = []
-            hostname_added = False
             
-            # Mevcut hostname girdilerini temizle ve yeni ekle
+            # IPv6 ve mevcut hostname girdilerini temizle
             for line in lines:
+                # IPv6 girişlerini atla (::1 ve benzeri)
+                if '::' in line and not line.strip().startswith('#'):
+                    self.logger.info(f"IPv6 girişi kaldırıldı: {line.strip()}")
+                    continue
                 # Bu hostname'i içeren satırları atla
                 if hostname in line and not line.strip().startswith('#'):
                     continue
                 new_lines.append(line)
             
-            # Yeni FQDN girdisini ekle (127.0.0.1'den önce)
+            # Son boş satırları temizle
+            while new_lines and not new_lines[-1].strip():
+                new_lines.pop()
+            
+            # Yeni FQDN girdisini dosyanın EN ALTINA ekle
             new_entry = f"{ip_address}  {fqdn} {hostname}"
+            new_lines.append("")  # Boş satır ekle
+            new_lines.append(new_entry)
             
-            # 127.0.0.1 satırından önce ekle
-            final_lines = []
-            inserted = False
-            for line in new_lines:
-                if '127.0.0.1' in line and not inserted:
-                    final_lines.append(new_entry)
-                    inserted = True
-                final_lines.append(line)
-            
-            if not inserted:
-                final_lines.insert(0, new_entry)
-            
-            new_content = '\n'.join(final_lines)
+            new_content = '\n'.join(new_lines)
             
             # Dosyayı güncelle
             temp_file = "/tmp/hosts_temp"

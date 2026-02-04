@@ -290,11 +290,7 @@ Defaults:{username} !requiretty
             bashrc_file = f'{home_dir}/.bashrc'
             display_config = '''
 # MicroStrategy GUI - X Display Configuration
-# Use SSH X11 forwarding display (localhost:10.0 by default)
-# SSH X11 forwarding will override this if connected with ssh -X
-if [ -z "$DISPLAY" ]; then
-    export DISPLAY=localhost:10.0
-fi
+export DISPLAY=localhost:10.0
 '''
             
             # Check if already configured
